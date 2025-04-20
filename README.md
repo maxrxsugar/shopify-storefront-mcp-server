@@ -84,10 +84,3 @@ If you encounter authentication errors:
 - Consider setting up IP restrictions in your Shopify Admin
 - Review the permissions granted to your Storefront API token
 
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
