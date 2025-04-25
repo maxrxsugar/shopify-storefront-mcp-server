@@ -670,26 +670,37 @@ async def customer_data(
     billing_address: Optional[Dict[str, Any]] = None,
     custom_fields: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Consolidated tool for all customer data operations (Create, Read, Update, Delete).
-    
-    This tool provides a unified interface for managing customer information.
-    It can read, update, or delete specific fields, or retrieve the entire customer profile.
-    
+    """Manages a LOCAL cache of user profile data to assist with Shopify interactions.
+
+    Use this tool to Create, Read, Update, or Delete user information like name, email,
+    addresses, and shopping preferences (e.g., shirt size, preferred color) stored locally.
+    This information can then be retrieved to potentially pre-fill details during Shopify
+    checkout or tailor product searches when using the 'shopify_storefront_graphql' tool.
+
+    Workflow Integration:
+    1. Use 'shopify_discover' to identify a Shopify store and get credentials.
+    2. Use `customer_data(operation='get')` to retrieve relevant user details (e.g., shipping address, size preference).
+    3. Use 'shopify_storefront_graphql' to interact with the store:
+        - Search/browse products (optionally using preferences from this tool in your query variables).
+        - Add items to a cart.
+        - Initiate checkout.
+        - **During checkout mutations (via 'shopify_storefront_graphql'), use the address/user data retrieved from this tool to populate required fields where the Storefront API allows (e.g., updating shipping address on a checkout).**
+
+    IMPORTANT:
+    - This tool manages data locally ONLY. It does NOT automatically sync with any Shopify store's customer account system.
+    - You may need to map the fields retrieved from this tool (e.g., 'shipping_address') to the specific structure required by a Shopify GraphQL mutation's variables. Check the Storefront API documentation for the exact format needed by checkout mutations.
+
     Args:
-        operation: The operation to perform - one of:
-                  - "get": Get customer data (specific field or all data)
-                  - "update": Update customer data (specific field or address)
-                  - "delete": Delete a specific field or all data
-        field: The specific field to operate on (for get/update/delete operations).
-               Can be "name", "email", "phone", "shipping_address", "billing_address", 
-               or any custom field name, or None to operate on the entire profile.
-        value: The value to set (for update operations).
-        shipping_address: Updated shipping address (for update operations).
-        billing_address: Updated billing address (for update operations).
-        custom_fields: Dictionary of custom fields to add/update (for update operations).
-    
+        operation: The operation: "get", "update", "delete".
+        field: Specific field to operate on (e.g., "name", "email", "phone", "shipping_address", "billing_address", "preferences.shirt_size"). Use None for 'get' or 'delete' to affect the entire profile.
+        value: The value to set for a specific field during an "update".
+        shipping_address: Dictionary representing the shipping address for "update". Follows Shopify address structure (address1, address2, city, province, country, zip, phone).
+        billing_address: Dictionary representing the billing address for "update". Follows Shopify address structure.
+        custom_fields: Dictionary of custom fields/preferences to add/update during an "update". Can be nested (e.g., {"preferences": {"shirt_size": "L"}}).
+
     Returns:
-        JSON string containing the requested data or operation result
+        JSON string containing the requested data or operation result (success/error message).
+        For 'get', returns the requested data. For 'update'/'delete', returns status.
     """
     # Load customer data
     data = load_user_data()
@@ -780,67 +791,33 @@ print("Shopify Storefront API MCP server initialized.", file=sys.stderr)
 
 @mcp.tool()
 async def shopify_discover(url: str) -> str:
-    """Detect if a URL belongs to a Shopify storefront and discover authentication tokens with usage guidance.
-    
-    This tool analyzes any given URL to determine if it's powered by Shopify, extracts
-    the canonical Shopify domain (.myshopify.com), and discovers any public Storefront API
-    access tokens embedded in the page or its assets. It also provides guidance on how to
-    effectively use the discovered tokens based on their permissions.
-    
-    IMPORTANT: This tool discovers tokens for the Shopify Storefront API only, not the Admin API.
-    The Storefront API is a public-facing API with limited capabilities, primarily focused on
-    browsing products, creating carts, and managing checkouts.
-    
+    """Detects Shopify stores, extracts credentials, and assesses API capabilities.
+
+    Analyzes a URL to confirm if it's a Shopify storefront, finds the canonical
+    '.myshopify.com' host, and discovers public Storefront API access tokens.
+    Crucially, it validates discovered tokens and provides ranked permissions
+    and detailed 'api_guidance' on how to effectively use them.
+
+    Workflow Integration:
+    1.  **Use this tool first** to get the necessary `host` and `token` for a target store.
+    2.  Examine the `tokens_ranked` and `api_guidance` in the response to understand what actions (e.g., read products, create carts) are possible with the best available token.
+    3.  Pass the validated `host` and `token` to the 'shopify_storefront_graphql' tool for subsequent interactions.
+    4.  Optionally, use the 'customer_data' tool to manage local user profile details that might be needed later for checkout via 'shopify_storefront_graphql'.
+
     Args:
-        url: Full URL of any page on the suspected Shopify store. This can be the home page,
-             a product page, collection page, or any other page on the domain.
-    
+        url: Full URL of any page on the suspected Shopify store.
+
     Returns:
-        JSON string with the following structure:
+        JSON string detailing discovery results:
         {
-            "shopify": true/false,              // Whether this is a Shopify storefront
-            "host": "example.myshopify.com",    // The canonical Shopify domain
-            "tokens_valid": ["token1", ...],    // List of valid public access tokens
-            "tokens_ranked": [                  // Tokens ranked by their capabilities
-                {
-                    "token": "token1",
-                    "permissions": ["read_products", "cart_create", ...]
-                },
-                ...
-            ],
-            "tokens_invalid": [...],            // Tokens found but invalid
-            "notes": [...],                     // Optional processing notes
-            "api_guidance": [                   // Guidance for API usage
-                {
-                    "token": "token1",
-                    "guidance": {
-                        "recommended_approaches": [...],
-                        "fallback_strategies": [...],
-                        "operations_to_avoid": [...],
-                        "example_queries": {...}
-                    }
-                }
-            ]
+            "shopify": true/false,
+            "host": "example.myshopify.com" | null,
+            "tokens_valid": [...],
+            "tokens_ranked": [{"token": "...", "permissions": [...]}, ...], // Ranked by capability
+            "tokens_invalid": [...],
+            "notes": [...],
+            "api_guidance": [{"token": "...", "guidance": {...}}, ...] // Actionable advice per token
         }
-    
-    Example:
-        To check a suspected Shopify store:
-        shopify_discover(url="https://example-store.com")
-        
-        In subsequent API calls, use the discovered host and token with shopify_storefront_graphql:
-        shopify_storefront_graphql(
-            mode="execute",
-            host="example.myshopify.com",
-            token="discovered_token",
-            query="{ shop { name } }"
-        )
-        
-        For full Storefront API capabilities analysis:
-        shopify_storefront_graphql(
-            mode="introspect",
-            host="example.myshopify.com",
-            token="discovered_token"
-        )
     """
     result = await discover_shopify(url)
     
@@ -872,101 +849,33 @@ async def shopify_storefront_graphql(
     variables: Optional[Dict[str, Any]] = None,
     api_version: str = DEFAULT_API_VERSION,
 ) -> str:
-    """Execute Shopify Storefront GraphQL operations with intelligent guidance.
-    
-    This unified tool provides multiple modes for interacting with Shopify's Storefront API
-    (NOT the Admin API) and offers intelligent guidance based on permissions and errors encountered.
-    
-    IMPORTANT: This tool is ONLY for the Shopify Storefront API, which is a public-facing, read-focused API 
-    with limited mutation capabilities. It is NOT for the Admin API, which requires different authentication 
-    and provides complete store management capabilities.
-    
-    The Storefront API allows you to:
-    - Query products, collections, and shop information
-    - Create and manage shopping carts
-    - Process checkout for customers
-    - Search products and collections
-    
+    """Executes Shopify Storefront GraphQL operations with guidance and potential user data integration.
+
+    Interacts with the Shopify Storefront API (NOT Admin API) using credentials obtained
+    from 'shopify_discover'. Supports query execution, testing, and introspection of API capabilities.
+    Can leverage locally stored user data from 'customer_data' for relevant operations.
+
+    Workflow Integration:
+    1. Obtain `host` and `token` using 'shopify_discover'.
+    2. Use `mode="introspect"` (optional) to understand API capabilities for the token.
+    3. Use `mode="execute"` or `mode="test"` to perform GraphQL queries/mutations:
+        - Browse products, collections, shop info.
+        - Search products (potentially filtering using preferences retrieved via `customer_data(operation='get')` passed in `variables`).
+        - Create carts (`cartCreate` mutation).
+        - **Initiate and manage checkout:** For checkout mutations that accept customer details (e.g., `checkoutShippingAddressUpdateV2`), retrieve the necessary information (like an address dictionary) using `customer_data(operation='get', field='shipping_address')` and pass it correctly formatted within the `variables` argument of this tool. Consult the Storefront API documentation for the expected variable structure for specific checkout mutations.
+
+    IMPORTANT: Only for the public-facing Storefront API. Requires a valid Storefront Access Token.
+
     Args:
-        mode: Operating mode - one of:
-              - "execute": Run a specific GraphQL query or mutation
-              - "test": Test a query and get guidance if it fails
-              - "introspect": Analyze accessible API operations and get workflow recommendations
-        host: The Shopify store domain (e.g., "example.myshopify.com")
-              If omitted, falls back to .env credentials
-        token: The Storefront API access token (NOT an Admin API token)
-              If omitted, falls back to .env credentials
-        query: The GraphQL query/mutation to execute (required for "execute" and "test" modes)
-        variables: Optional variables for the GraphQL query/mutation
-        api_version: Shopify API version to use (defaults to 2025-04)
-    
+        mode: "execute", "test", or "introspect".
+        host: Shopify store domain (e.g., "example.myshopify.com"). Use value from 'shopify_discover'. Falls back to .env.
+        token: Storefront API access token. Use value from 'shopify_discover'. Falls back to .env.
+        query: GraphQL query/mutation (required for "execute", "test").
+        variables: Optional dictionary for GraphQL variables. **Use this to pass data retrieved from 'customer_data' when applicable (e.g., for checkout mutations).**
+        api_version: Shopify API version (defaults to 2025-04).
+
     Returns:
-        JSON string with the operation result and guidance
-    
-    Typical Usage Patterns for Storefront API:
-        
-    1. Basic Query/Mutation:
-       ```
-       shopify_storefront_graphql(
-           mode="execute",
-           host="example.myshopify.com",
-           token="your_storefront_token",
-           query="{ shop { name } }"
-       )
-       ```
-    
-    2. Testing a Query (with Guidance):
-       ```
-       shopify_storefront_graphql(
-           mode="test",
-           host="example.myshopify.com",
-           token="your_storefront_token",
-           query="{ products(first: 5) { edges { node { id title } } } }"
-       )
-       ```
-       
-    3. API Capability Introspection:
-       ```
-       shopify_storefront_graphql(
-           mode="introspect",
-           host="example.myshopify.com",
-           token="your_storefront_token"
-       )
-       ```
-    
-    When direct product access is denied, try the alternative pattern:
-    
-    ```
-    # First get product types
-    shopify_storefront_graphql(
-        mode="execute",
-        host="example.myshopify.com", 
-        token="your_storefront_token",
-        query="{ productTypes(first: 10) { edges { node } } }"
-    )
-    
-    # Then search by product type
-    shopify_storefront_graphql(
-        mode="execute",
-        host="example.myshopify.com",
-        token="your_storefront_token",
-        query='''
-        {
-          search(query: "TypeName", types: [PRODUCT], first: 5) {
-            edges {
-              node {
-                ... on Product {
-                  id
-                  title
-                  variants(first: 1) { edges { node { id } } }
-                }
-              }
-            }
-          }
-        }
-        '''
-    )
-    ```
+        JSON string: For "execute", the raw GraphQL response. For "test", success status, data/errors, and guidance. For "introspect", analysis of accessible components and workflow recommendations. Includes error details on failure.
     """
     host = host or (f"{ENV_STORE}.myshopify.com" if ENV_STORE else None)
     token = token or ENV_TOKEN
