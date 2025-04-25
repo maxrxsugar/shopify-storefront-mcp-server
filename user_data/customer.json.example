@@ -1,0 +1,35 @@
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "phone": "555-123-4567",
+  "shipping_address": {
+    "address1": "123 Main Street",
+    "address2": "Apt 456",
+    "city": "Anytown",
+    "state": "CA",
+    "postal_code": "94105",
+    "country": "US"
+  },
+  "billing_address": {
+    "address1": "123 Main Street",
+    "address2": "Apt 456",
+    "city": "Anytown",
+    "state": "CA",
+    "postal_code": "94105",
+    "country": "US"
+  },
+  "preferences": {
+    "theme": "dark",
+    "notifications": "email",
+    "language": "en-US"
+  },
+  "loyalty_tier": "gold",
+  "last_purchase_date": "2023-06-15",
+  "favorite_products": [
+    "gid://shopify/Product/12345",
+    "gid://shopify/Product/67890"
+  ],
+  "notes": "Prefers delivery in the evening",
+  "marketing_opt_in": true,
+  "shirt_size": "M"
+} 

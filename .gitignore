@@ -183,6 +183,11 @@ credentials.json
 token_cache.json
 *_token_cache.json
 
+# User data with personal information
+user_data/customer.json
+user_data/*.json
+!user_data/*.example
+
 # Logs
 logs/
 *.log

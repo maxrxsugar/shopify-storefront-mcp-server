@@ -60,6 +60,13 @@ ENV_STORE: Optional[str] = os.getenv("SHOPIFY_STORE_NAME")
 DEFAULT_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2025-04")
 
 ###############################################################################
+# FastMCP server setup
+###############################################################################
+
+mcp = FastMCP("shopify_storefront", version="0.3.0")
+print("Shopify Storefront API MCP server initialized.", file=sys.stderr)
+
+###############################################################################
 # Heuristic patterns for discovery
 ###############################################################################
 
@@ -540,10 +547,234 @@ async def discover_shopify(url: str, max_assets: int = 30) -> Dict[str, Any]:
     return result
 
 ###############################################################################
+# MCP Resources for generic customer data
+###############################################################################
+
+# This section implements MCP resources for customer data
+# These resources allow clients to access customer information in a standardized way
+# through the MCP protocol. The resources are:
+#
+# - customer://name - The customer's full name (text/plain)
+# - customer://email - The customer's email address (text/plain)
+# - customer://phone - The customer's phone number (text/plain)
+# - customer://shipping_address - The customer's shipping address (application/json)
+# - customer://billing_address - The customer's billing address (application/json)
+# - customer://profile - The customer's complete profile (application/json)
+#
+# The resources are backed by persistent storage in user_data/customer.json
+# and can be updated using the update_customer_data tool.
+
+# Helper function to load user data from persistent storage
+def load_user_data():
+    """Load user data from the user_data directory."""
+    user_data_path = os.path.join(SCRIPT_DIR, "user_data")
+    
+    # Create user_data directory if it doesn't exist
+    if not os.path.exists(user_data_path):
+        os.makedirs(user_data_path)
+    
+    # Load customer data file if it exists
+    customer_data_path = os.path.join(user_data_path, "customer.json")
+    if os.path.exists(customer_data_path):
+        with open(customer_data_path, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    return {}
+
+# Helper function to save user data to persistent storage
+def save_user_data(data):
+    """Save user data to the user_data directory."""
+    user_data_path = os.path.join(SCRIPT_DIR, "user_data")
+    
+    # Create user_data directory if it doesn't exist
+    if not os.path.exists(user_data_path):
+        os.makedirs(user_data_path)
+    
+    # Save customer data
+    customer_data_path = os.path.join(user_data_path, "customer.json")
+    with open(customer_data_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+# Customer personal information
+@mcp.resource(
+    uri="customer://name",
+    name="Customer Name",
+    description="The customer's full name",
+    mime_type="text/plain"
+)
+def customer_name():
+    data = load_user_data()
+    return data.get("name", "")
+
+@mcp.resource(
+    uri="customer://email",
+    name="Customer Email",
+    description="The customer's email address",
+    mime_type="text/plain"
+)
+def customer_email():
+    data = load_user_data()
+    return data.get("email", "")
+
+@mcp.resource(
+    uri="customer://phone",
+    name="Customer Phone",
+    description="The customer's phone number",
+    mime_type="text/plain"
+)
+def customer_phone():
+    data = load_user_data()
+    return data.get("phone", "")
+
+# Customer shipping information
+@mcp.resource(
+    uri="customer://shipping_address",
+    name="Shipping Address",
+    description="The customer's shipping address",
+    mime_type="application/json"
+)
+def customer_shipping_address():
+    data = load_user_data()
+    return data.get("shipping_address", {})
+
+# Customer billing information
+@mcp.resource(
+    uri="customer://billing_address",
+    name="Billing Address",
+    description="The customer's billing address",
+    mime_type="application/json"
+)
+def customer_billing_address():
+    data = load_user_data()
+    return data.get("billing_address", {})
+
+# Complete customer data
+@mcp.resource(
+    uri="customer://profile",
+    name="Customer Profile",
+    description="The customer's complete profile information",
+    mime_type="application/json"
+)
+def customer_profile():
+    return load_user_data()
+
+# Consolidated customer data tool for all CRUD operations
+@mcp.tool()
+async def customer_data(
+    operation: str,
+    field: Optional[str] = None,
+    value: Optional[Any] = None,
+    shipping_address: Optional[Dict[str, Any]] = None,
+    billing_address: Optional[Dict[str, Any]] = None,
+    custom_fields: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Consolidated tool for all customer data operations (Create, Read, Update, Delete).
+    
+    This tool provides a unified interface for managing customer information.
+    It can read, update, or delete specific fields, or retrieve the entire customer profile.
+    
+    Args:
+        operation: The operation to perform - one of:
+                  - "get": Get customer data (specific field or all data)
+                  - "update": Update customer data (specific field or address)
+                  - "delete": Delete a specific field or all data
+        field: The specific field to operate on (for get/update/delete operations).
+               Can be "name", "email", "phone", "shipping_address", "billing_address", 
+               or any custom field name, or None to operate on the entire profile.
+        value: The value to set (for update operations).
+        shipping_address: Updated shipping address (for update operations).
+        billing_address: Updated billing address (for update operations).
+        custom_fields: Dictionary of custom fields to add/update (for update operations).
+    
+    Returns:
+        JSON string containing the requested data or operation result
+    """
+    # Load customer data
+    data = load_user_data()
+    
+    # GET operation - retrieve customer data
+    if operation.lower() == "get":
+        if field is None:
+            # Return the entire profile
+            return json.dumps(data)
+        elif field in ["name", "email", "phone", "shipping_address", "billing_address"]:
+            # Return a specific standard field
+            return json.dumps({"field": field, "value": data.get(field, "")})
+        else:
+            # Return a custom field or empty if it doesn't exist
+            return json.dumps({"field": field, "value": data.get(field, "")})
+    
+    # UPDATE operation - update customer data
+    elif operation.lower() == "update":
+        updates_made = False
+        
+        # Update a specific field
+        if field is not None and value is not None:
+            data[field] = value
+            updates_made = True
+        
+        # Update shipping address
+        if shipping_address is not None:
+            # Handle migration from street to address1/address2 if needed
+            if "shipping_address" in data and "street" in data["shipping_address"] and "address1" not in shipping_address:
+                shipping_address["address1"] = data["shipping_address"]["street"]
+            data["shipping_address"] = shipping_address
+            updates_made = True
+        
+        # Update billing address
+        if billing_address is not None:
+            # Handle migration from street to address1/address2 if needed
+            if "billing_address" in data and "street" in data["billing_address"] and "address1" not in billing_address:
+                billing_address["address1"] = data["billing_address"]["street"]
+            data["billing_address"] = billing_address
+            updates_made = True
+        
+        # Update custom fields
+        if custom_fields is not None:
+            for key, value in custom_fields.items():
+                data[key] = value
+                updates_made = True
+        
+        # Save data if updates were made
+        if updates_made:
+            save_user_data(data)
+            return json.dumps({"status": "success", "message": "Customer data updated", "data": data})
+        else:
+            return json.dumps({"error": "No updates provided"})
+    
+    # DELETE operation - delete customer data
+    elif operation.lower() == "delete":
+        if field is None:
+            # Delete all customer data
+            empty_data = {}
+            save_user_data(empty_data)
+            return json.dumps({"status": "success", "message": "All customer data deleted"})
+        elif field in ["name", "email", "phone", "shipping_address", "billing_address"]:
+            # Delete a specific standard field
+            if field in data:
+                del data[field]
+                save_user_data(data)
+                return json.dumps({"status": "success", "message": f"Field '{field}' deleted", "data": data})
+            else:
+                return json.dumps({"status": "warning", "message": f"Field '{field}' not found"})
+        else:
+            # Delete a custom field
+            if field in data:
+                del data[field]
+                save_user_data(data)
+                return json.dumps({"status": "success", "message": f"Field '{field}' deleted", "data": data})
+            else:
+                return json.dumps({"status": "warning", "message": f"Field '{field}' not found"})
+    
+    else:
+        return json.dumps({"error": f"Unknown operation: {operation}"})
+
+###############################################################################
 # FastMCP server setup
 ###############################################################################
 
-mcp = FastMCP("shopify_storefront", version="0.3.0")
 print("Shopify Storefront API MCP server initialized.", file=sys.stderr)
 
 
