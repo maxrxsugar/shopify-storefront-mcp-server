@@ -849,33 +849,54 @@ async def shopify_storefront_graphql(
     variables: Optional[Dict[str, Any]] = None,
     api_version: str = DEFAULT_API_VERSION,
 ) -> str:
-    """Executes Shopify Storefront GraphQL operations with guidance and potential user data integration.
+    """
+    Executes Shopify Storefront GraphQL operations with guidance and potential user data integration.
 
-    Interacts with the Shopify Storefront API (NOT Admin API) using credentials obtained
-    from 'shopify_discover'. Supports query execution, testing, and introspection of API capabilities.
-    Can leverage locally stored user data from 'customer_data' for relevant operations.
+Interacts with the Shopify Storefront API (NOT Admin API) using credentials obtained
+from 'shopify_discover'. Supports query execution, testing, and introspection of API capabilities.
+Can leverage locally stored user data from 'customer_data' for relevant operations.
 
-    Workflow Integration:
-    1. Obtain `host` and `token` using 'shopify_discover'.
-    2. Use `mode="introspect"` (optional) to understand API capabilities for the token.
-    3. Use `mode="execute"` or `mode="test"` to perform GraphQL queries/mutations:
-        - Browse products, collections, shop info.
-        - Search products (potentially filtering using preferences retrieved via `customer_data(operation='get')` passed in `variables`).
-        - Create carts (`cartCreate` mutation).
-        - **Initiate and manage checkout:** For checkout mutations that accept customer details (e.g., `checkoutShippingAddressUpdateV2`), retrieve the necessary information (like an address dictionary) using `customer_data(operation='get', field='shipping_address')` and pass it correctly formatted within the `variables` argument of this tool. Consult the Storefront API documentation for the expected variable structure for specific checkout mutations.
+Workflow Integration:
+1. Obtain `host` and `token` using 'shopify_discover'.
+2. Use `mode="introspect"` (optional) to understand API capabilities for the token.
+3. Use `mode="execute"` or `mode="test"` to perform GraphQL queries/mutations:
+    - Browse products, collections, shop info.
+    - Search products (potentially filtering using preferences retrieved via `customer_data(operation='get')` passed in `variables`).
+    - Create carts (`cartCreate` mutation).
+    - **Initiate and manage checkout:** For checkout mutations that accept customer details (e.g., `checkoutShippingAddressUpdateV2`), retrieve the necessary information (like an address dictionary) using `customer_data(operation='get', field='shipping_address')` and pass it correctly formatted within the `variables` argument of this tool. Consult the Storefront API documentation for the expected variable structure for specific checkout mutations.
 
-    IMPORTANT: Only for the public-facing Storefront API. Requires a valid Storefront Access Token.
+IMPORTANT: Only for the public-facing Storefront API. Requires a valid Storefront Access Token.
 
-    Args:
-        mode: "execute", "test", or "introspect".
-        host: Shopify store domain (e.g., "example.myshopify.com"). Use value from 'shopify_discover'. Falls back to .env.
-        token: Storefront API access token. Use value from 'shopify_discover'. Falls back to .env.
-        query: GraphQL query/mutation (required for "execute", "test").
-        variables: Optional dictionary for GraphQL variables. **Use this to pass data retrieved from 'customer_data' when applicable (e.g., for checkout mutations).**
-        api_version: Shopify API version (defaults to 2025-04).
+Cart URL Construction Guide:
+- The Storefront API's `cartCreate` mutation returns a `checkoutUrl` that takes users directly to checkout without cart editing capabilities.
+- To create an editable cart URL that allows item review/modification:
+  1. Obtain variant IDs from product data (via GraphQL queries)
+  2. Construct URL manually using format:
+     `https://www.{store-domain}/cart/add?id[]={variant_id1}&id[]={variant_id2}...`
+  3. URL will:
+     - Add specified items to cart
+     - Redirect to standard cart page (`/{store-domain}/cart`)
+     - Allow quantity changes, item removal, and continued shopping
+- Example for 3 items:
+  `https://www.americantall.com/cart/add?id[]=42185708240977&id[]=42096230334545&id[]=42185708240977`
+- For stores with custom domains, replace {store-domain} with actual domain:
+  `https://www.americantall.com/cart/add?id[]=42185708240977&id[]=42096230334545`
+- Use constructed cart URLs when:
+  - User may need to modify cart contents
+  - Combining items from multiple queries
+  - Building cart links without API interaction
+- Use direct `checkoutUrl` from API response only for immediate payment
 
-    Returns:
-        JSON string: For "execute", the raw GraphQL response. For "test", success status, data/errors, and guidance. For "introspect", analysis of accessible components and workflow recommendations. Includes error details on failure.
+Args:
+    mode: "execute", "test", or "introspect".
+    host: Shopify store domain (e.g., "example.myshopify.com"). Use value from 'shopify_discover'. Falls back to .env.
+    token: Storefront API access token. Use value from 'shopify_discover'. Falls back to .env.
+    query: GraphQL query/mutation (required for "execute", "test").
+    variables: Optional dictionary for GraphQL variables. **Use this to pass data retrieved from 'customer_data' when applicable (e.g., for checkout mutations).**
+    api_version: Shopify API version (defaults to 2025-04).
+
+Returns:
+    JSON string: For "execute", the raw GraphQL response. For "test", success status, data/errors, and guidance. For "introspect", analysis of accessible components and workflow recommendations. Includes error details on failure.
     """
     host = host or (f"{ENV_STORE}.myshopify.com" if ENV_STORE else None)
     token = token or ENV_TOKEN
