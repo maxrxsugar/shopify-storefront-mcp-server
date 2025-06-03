@@ -16,7 +16,7 @@ This server provides access to the Shopify Storefront API via MCP, allowing AI a
 2. Install dependencies: `pip install -r requirements.txt`
 3. Copy `.env.example` to `.env` and configure your environment variables
 4. Generate a Storefront API token via Shopify Admin (see below)
-5. Run the server: `python shopify_storefront_mcp_server.py`
+5. Run the server: `python -m shopify_storefront_mcp_server`
 
 ## Environment Variables
 
@@ -52,7 +52,7 @@ SHOPIFY_BUYER_IP=127.0.0.1
 Running with the MCP server:
 
 ```
-python shopify_storefront_mcp_server.py
+python -m shopify_storefront_mcp_server
 ```
 
 The server exposes the following MCP tools:
