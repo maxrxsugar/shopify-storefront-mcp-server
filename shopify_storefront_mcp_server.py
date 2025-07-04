@@ -1,3 +1,3 @@
-from mcp.fastapi import create_app
+from mcp.app.fastapi import create_app
 
 app = create_app()
