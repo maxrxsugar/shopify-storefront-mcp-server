@@ -1,4 +1,4 @@
-from mcp import AssistantApp
+from mcp.app import AssistantApp
 
 app = AssistantApp()
 
