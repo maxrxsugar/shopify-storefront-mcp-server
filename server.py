@@ -1,2 +1,2 @@
-from mcp.server.app import app
+from mcp.app import app
 
