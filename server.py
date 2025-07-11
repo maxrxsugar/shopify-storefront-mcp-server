@@ -1,1 +1,1 @@
-from mcp.fastapi import assistant_app as app
+from mcp.app import assistant_app as app
