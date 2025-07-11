@@ -1,4 +1,4 @@
-from mcp import assistant_app
+from mcp.fastapi import assistant_app
 from fastapi import FastAPI
 
 app = assistant_app()
