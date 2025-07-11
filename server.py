@@ -1,3 +1,1 @@
-from mcp.server.fastapi import AssistantServer
-
-app = AssistantServer().app
+from mcp.fastapi_app import app
