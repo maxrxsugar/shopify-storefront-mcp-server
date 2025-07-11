@@ -1,1 +1,1 @@
-from mcp import assistant_app as app
+from mcp.main import assistant_app as app
