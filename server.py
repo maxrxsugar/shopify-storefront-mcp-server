@@ -1,1 +1,3 @@
-from mcp.fastapi import assistant_app as app
+from mcp.integrations.fastapi import create_assistant_app
+
+app = create_assistant_app()
