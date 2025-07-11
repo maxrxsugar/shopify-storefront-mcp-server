@@ -1,2 +1,1 @@
-from mcp.app import app
-
+from mcp.fastapi_app import app
