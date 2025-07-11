@@ -1,7 +1,3 @@
-from fastapi import FastAPI
+from mcp import assistant_app
 
-app = FastAPI()
-
-@app.get("/")
-async def root():
-    return {"message": "Hello from MCP server!"}
+app = assistant_app()
