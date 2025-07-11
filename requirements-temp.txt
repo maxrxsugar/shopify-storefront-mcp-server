@@ -8,3 +8,4 @@ git+https://${MCP_GITHUB_TOKEN}@github.com/mcpassistant/mcp.git@main#egg=mcp
 
 
 
+
