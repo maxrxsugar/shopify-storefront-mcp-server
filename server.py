@@ -1,1 +1,3 @@
-from mcp.web import assistant_app as app
+from mcp.server.fastmcp import FastMCP
+
+app = FastMCP()
