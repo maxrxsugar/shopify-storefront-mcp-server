@@ -1,7 +1,17 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from mcp import ServerSession
 
 app = FastAPI()
+
+# ✅ Correct: Apply middleware on the same app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict to ["https://startling-rolypoly-956344.netlify.app"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def health_check():
