@@ -19,8 +19,12 @@ async def health_check():
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     body = await request.body()
-    session = await ServerSession.from_fastapi(request)  # ✅ Correct method
-    response = await session.handle_json_rpc_bytes(body)  # ✅ Use raw bytes
+    session = await ServerSession.from_fastapi(request)
+    response = await session.handle_json_rpc_bytes(body)
     return response
+
+import mcp
+print("🔍 MCP VERSION:", mcp.__version__)
+
 
 
