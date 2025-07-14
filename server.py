@@ -7,7 +7,7 @@ app = FastAPI()
 # ✅ Correct: Apply middleware on the same app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or restrict to ["https://startling-rolypoly-956344.netlify.app"]
+    allow_origins=["https://startling-rolypoly-956344.netlify.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
