@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# 🔁 Full clean install with MCP v1.10.1
+# build.sh
 
-# 🧹 Remove previous virtual environment (forces clean MCP install)
-rm -rf .venv || true
+# ✅ Create and activate a local virtual environment
+python -m venv .venv
+source .venv/bin/activate
 
-# 🔄 Reinstall in fresh environment
+# ✅ Upgrade pip and force clean install of dependencies
 pip install --upgrade pip
 pip install --force-reinstall mcp==1.10.1
 pip install -r requirements-temp.txt
