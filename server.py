@@ -4,7 +4,6 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ Correct: Apply middleware on the same app
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -20,6 +19,6 @@ async def health_check():
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     body = await request.json()
-    session = ServerSession()
+    session = ServerSession.from_fastapi()  # ✅ This is the updated constructor
     response = await session.handle_json_rpc(body)
     return response
