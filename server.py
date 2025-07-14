@@ -24,7 +24,7 @@ async def handle_mcp(request: Request):
     return response
 
 import mcp
-print("🔍 MCP VERSION:", mcp.__version__)
+
 
 
 
