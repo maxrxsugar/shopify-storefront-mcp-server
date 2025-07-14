@@ -18,11 +18,9 @@ async def health_check():
 
 @app.post("/mcp")
 async def handle_mcp(request: Request):
-    body = await request.json()
-    session = ServerSession.from_httpx(request)  # ✅ FIXED: request passed here
-    response = await session.handle_json_rpc(body)
+    body = await request.body()
+    session = await ServerSession.from_fastapi(request)  # ✅ Correct method
+    response = await session.handle_json_rpc_bytes(body)  # ✅ Use raw bytes
     return response
-
-
 
 
