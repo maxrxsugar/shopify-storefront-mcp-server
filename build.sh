@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
-python -m venv .venv
-source .venv/bin/activate
+# Clean up old environments (optional but clean)
+rm -rf .venv || true
 
+# Upgrade pip and reinstall from scratch
 pip install --upgrade pip
-pip install --upgrade mcp==1.10.1
+
+# Install correct version of MCP and other deps
+pip install mcp==1.10.1
 pip install -r requirements-temp.txt
