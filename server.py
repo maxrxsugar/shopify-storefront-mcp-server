@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mcp import ServerSession
-import mcp
-print("⚠️ MCP Version Detected:", mcp.__file__)  # Helps verify which version is running
 
 app = FastAPI()
 
+# ✅ CORS setup — allows your frontend to talk to backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -21,7 +20,7 @@ async def health_check():
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     body = await request.json()
-    session = ServerSession.from_httpx()  # ✅ Only available in MCP 1.10.1
+    session = ServerSession.from_httpx()  # ✅ MCP 1.10.1
     response = await session.handle_json_rpc(body)
     return response
 
