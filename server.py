@@ -18,9 +18,9 @@ async def health_check():
 
 @app.post("/mcp")
 async def handle_mcp(request: Request):
-    body = await request.json()
-    session = ServerSession.from_httpx()  # ✅ use this for mcp 1.10.1
-    response = await session.handle_json_rpc(body)
+    body = await request.body()
+    session = ServerSession.create()
+    response = await session.handle_json_rpc_bytes(body)
     return response
 
 
