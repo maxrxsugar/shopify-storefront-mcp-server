@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mcp import ServerSession
+import mcp
+
+print("⚠️ MCP version at runtime:", mcp.__version__)  # Helps us debug
 
 app = FastAPI()
 
@@ -18,7 +21,8 @@ async def health_check():
 
 @app.post("/mcp")
 async def handle_mcp(request: Request):
-    body = await request.body()
-    session = await ServerSession.from_fastapi(request)
-    response = await session.handle_json_rpc_bytes(body)
+    body = await request.json()
+    session = ServerSession()  # Old-style constructor
+    response = await session.handle_json_rpc(body)
     return response
+
