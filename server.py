@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.integrations.fastapi import chat  # ✅ THIS is the new location
+from mcp.fastapi import chat  # ✅ Available in v1.10.1
 
 app = FastAPI()
 
