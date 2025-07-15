@@ -5,7 +5,8 @@
 python -m venv .venv
 source .venv/bin/activate
 
-# ✅ Upgrade pip and force clean install of dependencies
+# ✅ Upgrade pip
 pip install --upgrade pip
-pip install --force-reinstall mcp==1.10.1
+
+# ✅ Install requirements, which should include mcp==1.11.0
 pip install -r requirements-temp.txt
