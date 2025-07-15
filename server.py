@@ -5,7 +5,7 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ CORS Setup
+# CORS setup for Netlify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -27,8 +27,18 @@ async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
     try:
         body = await request.body()
-        session = ServerSession()
-        response_data = await session.handle_json_rpc_bytes(body)
+        response_data = b""
+
+        async def read_stream():
+            return body
+
+        async def write_stream(data: bytes):
+            nonlocal response_data
+            response_data = data
+
+        # ✅ This is the valid call signature for your version
+        session = ServerSession(read_stream, write_stream, init_options={})
+        await session.run()
 
         return Response(content=response_data, media_type="application/json")
 
