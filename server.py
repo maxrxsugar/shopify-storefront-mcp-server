@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.integrations.fastapi import chat  # ✅ Correct import path
+from mcp.fastapi import chat
 
 app = FastAPI()
 
