@@ -5,7 +5,7 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ CORS config
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -20,24 +20,15 @@ async def health_check():
 
 @app.options("/mcp")
 async def options_handler():
-    # Optional: allows better CORS visibility on preflight
     return Response(status_code=200)
 
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
+
+    # ✅ Legacy-compatible JSON-RPC handling
     body = await request.body()
+    session = ServerSession()
+    result = await session.handle_json_rpc_bytes(body)
 
-    async def read_stream():
-        return body
-
-    async def write_stream(data: bytes):
-        nonlocal response_data
-        response_data = data
-
-    response_data = b""
-
-    session = ServerSession(read_stream, write_stream, init_options={})
-    await session.run()
-
-    return Response(content=response_data, media_type="application/json")
+    return Response(content=result, media_type="application/json")
