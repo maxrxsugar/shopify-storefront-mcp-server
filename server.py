@@ -1,10 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.integrations.fastapi import chat  # ✅ This works with mcp >= 1.11.0
+from mcp.integrations.fastapi import chat  # ✅ MCP 1.11+
 
 app = FastAPI()
 
-# ✅ CORS for Netlify frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -13,12 +12,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Simple health check
 @app.get("/")
 def root():
     return {"status": "ok"}
 
-# ✅ Use MCP's built-in router
-app.include_router(chat.router, prefix="/mcp")
-
+@app.post("/mcp")
+async def mcp_endpoint(request: Request):
+    body = await request.json()
+    return await chat(body)
 
