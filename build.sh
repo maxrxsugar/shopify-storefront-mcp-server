@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # build.sh
 
+# Create and activate virtual env
 python -m venv .venv
 source .venv/bin/activate
 
+# Clean install deps
 pip install --upgrade pip
-pip install --no-cache-dir -r requirements-temp.txt
+pip install -r requirements-temp.txt
 
