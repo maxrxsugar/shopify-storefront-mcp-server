@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.fastapi import mcp_router
+from mcp.integrations.fastapi import chat  # ✅ THIS is the new location
 
 app = FastAPI()
 
@@ -16,5 +16,7 @@ app.add_middleware(
 def root():
     return {"status": "ok"}
 
-# ✅ Mount the MCP router directly
-app.include_router(mcp_router, prefix="/mcp")
+@app.post("/mcp")
+async def mcp_endpoint(request: Request):
+    body = await request.json()
+    return await chat(body)
