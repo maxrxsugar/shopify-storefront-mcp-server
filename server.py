@@ -1,31 +1,3 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-import openai
-import os
-from dotenv import load_dotenv
-import time
-
-load_dotenv()
-
-# Load environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
-
-app = FastAPI()
-
-# Configure CORS for Netlify frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://startling-rolypoly-956344.netlify.app"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-def root():
-    return {"status": "ok"}
-
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     data = await request.json()
@@ -59,14 +31,21 @@ async def mcp_handler(request: Request):
             )
             if run_status.status == "completed":
                 break
+            elif run_status.status == "failed":
+                return {"error": f"Run failed: {run_status.last_error}"}
             time.sleep(1)
 
-        # Get final message
+        # Fetch assistant reply
         messages = openai.beta.threads.messages.list(thread_id=thread.id)
+
+        if not messages.data or not messages.data[0].content:
+            return {"error": "No reply received from assistant."}
+
         reply = messages.data[0].content[0].text.value
 
         return {"reply": reply}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Server error: {str(e)}"}
+
 
