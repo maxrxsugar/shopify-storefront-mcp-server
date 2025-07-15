@@ -1,11 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
-from mcp import ServerSession
+from mcp.server.fastapi import ServerSession
 
 app = FastAPI()
 
-# ✅ CORS for Netlify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -18,21 +16,14 @@ app.add_middleware(
 async def health_check():
     return {"status": "ok"}
 
-@app.options("/mcp")
-async def options_handler():
-    return Response(status_code=200)
-
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
+
     try:
-        body = await request.body()
-
-        # ✅ This is the only valid call for MCP 1.10.1
         session = ServerSession.create()
-        response = await session.handle_json_rpc_bytes(body)
-
-        return Response(content=response, media_type="application/json")
+        response = await session.handle(request)
+        return response  # Already a proper FastAPI Response
 
     except Exception as e:
         print(f"❌ MCP processing error: {e}")
