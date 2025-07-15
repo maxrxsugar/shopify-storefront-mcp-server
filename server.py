@@ -20,10 +20,8 @@ async def health_check():
 
 @app.post("/mcp")
 async def handle_mcp(request: Request):
-    body = await request.body()
-    session = ServerSession()  # ✅ Use constructor instead of .create()
-    response_bytes = await session.handle_json_rpc_bytes(body)
+    session = await ServerSession.from_fastapi(request)  # ✅ Proper async init
+    response_bytes = await session.run()
     return Response(content=response_bytes, media_type="application/json")
-
 
 
