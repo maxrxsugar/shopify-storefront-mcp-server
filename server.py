@@ -1,10 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp import chat  # ✅ This works with mcp==1.11.0 from PyPI
+from mcp.integrations.fastapi import chat  # ✅ Correct import path
 
 app = FastAPI()
 
-# ✅ Replace with your actual Netlify frontend URL (no trailing slash)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
