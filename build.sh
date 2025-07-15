@@ -5,6 +5,7 @@
 python -m venv .venv
 source .venv/bin/activate
 
-# ✅ Upgrade pip and install from requirements
+# ✅ Clean install of all dependencies including MCP
 pip install --upgrade pip
+pip uninstall -y mcp || true  # Make sure old version is gone
 pip install -r requirements-temp.txt
