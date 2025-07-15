@@ -5,7 +5,7 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ CORS for Netlify frontend
+# ✅ CORS for Netlify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -28,21 +28,11 @@ async def handle_mcp(request: Request):
     try:
         body = await request.body()
 
-        # ✅ Manually handle JSON-RPC
-        async def read_stream():
-            return body
+        # ✅ This is the only valid call for MCP 1.10.1
+        session = ServerSession.create()
+        response = await session.handle_json_rpc_bytes(body)
 
-        async def write_stream(data: bytes):
-            nonlocal response_data
-            response_data = data
-
-        response_data = b""
-
-        # ✅ This is the constructor your version expects
-        session = ServerSession(read_stream, write_stream, init_options={})
-        await session.handle()
-
-        return Response(content=response_data, media_type="application/json")
+        return Response(content=response, media_type="application/json")
 
     except Exception as e:
         print(f"❌ MCP processing error: {e}")
