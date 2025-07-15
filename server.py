@@ -5,7 +5,6 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ CORSMiddleware setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -26,9 +25,9 @@ async def options_handler():
 async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
 
-    # ✅ Modern MCP API (this is the one!)
     session = await ServerSession.from_fastapi(request)
     response = await session.run()
 
+    # ✅ Ensure raw bytes response
     return Response(content=response, media_type="application/json")
 
