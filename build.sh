@@ -5,11 +5,6 @@
 python -m venv .venv
 source .venv/bin/activate
 
-# ✅ Upgrade pip
+# ✅ Upgrade pip and install from requirements
 pip install --upgrade pip
-
-# ✅ Install MCP directly from GitHub using the token
-pip install "mcp @ git+https://${GITHUB_TOKEN}@github.com/openai/mcp.git@main"
-
-# ✅ Install the rest of the dependencies
 pip install -r requirements-temp.txt
