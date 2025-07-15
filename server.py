@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.server.fastapi import ServerSession
+from fastapi.responses import Response
+from mcp import ServerSession
 
 app = FastAPI()
 
@@ -21,9 +22,12 @@ async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
 
     try:
-        session = ServerSession.create()
-        response = await session.handle(request)
-        return response  # Already a proper FastAPI Response
+        body = await request.body()
+
+        session = ServerSession()
+        result = await session.run(body)
+
+        return Response(content=result, media_type="application/json")
 
     except Exception as e:
         print(f"❌ MCP processing error: {e}")
