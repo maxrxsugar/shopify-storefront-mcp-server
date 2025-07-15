@@ -1,3 +1,16 @@
+from fastapi import FastAPI, Request
+import openai
+import os
+import time
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = FastAPI()
+
+ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     data = await request.json()
