@@ -5,7 +5,7 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# CORS config for Netlify
+# ✅ CORS config
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -18,9 +18,14 @@ app.add_middleware(
 async def health_check():
     return {"status": "ok"}
 
+@app.options("/mcp")
+async def options_handler():
+    # Optional: allows better CORS visibility on preflight
+    return Response(status_code=200)
+
 @app.post("/mcp")
 async def handle_mcp(request: Request):
-    # Manual setup for MCP 1.10.1
+    print("✅ /mcp endpoint hit")
     body = await request.body()
 
     async def read_stream():
@@ -34,4 +39,5 @@ async def handle_mcp(request: Request):
 
     session = ServerSession(read_stream, write_stream, init_options={})
     await session.run()
+
     return Response(content=response_data, media_type="application/json")
