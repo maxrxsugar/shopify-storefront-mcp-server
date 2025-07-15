@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp import chat
+from mcp.fastapi import chat
 
 app = FastAPI()
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Can replace with ["https://startling-rolypoly-956344.netlify.app"] for stricter security
+    allow_origins=["https://startling-rolypoly-956344.netlify.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -15,15 +14,9 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "MCP server is live!"}
+    return {"status": "ok"}
 
 @app.post("/mcp")
 async def mcp_endpoint(request: Request):
-    try:
-        body = await request.json()
-        response = await chat(body)
-        return response
-    except Exception as e:
-        print(f"❌ MCP processing error: {e}")
-        return {"error": str(e)}
-
+    body = await request.json()
+    return await chat(body)
