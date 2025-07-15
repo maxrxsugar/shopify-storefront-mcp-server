@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.fastapi import chat  # ✅ Available in v1.10.1
+from mcp.fastapi import chat  # ✅ Compatible with v1.10.1
 
 app = FastAPI()
 
