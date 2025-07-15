@@ -5,7 +5,10 @@
 python -m venv .venv
 source .venv/bin/activate
 
-# ✅ Clean install of all dependencies including MCP
+# ✅ Upgrade pip
 pip install --upgrade pip
-pip uninstall -y mcp || true  # Make sure old version is gone
+
+# ✅ Install dependencies with token-authenticated MCP
+pip install --no-cache-dir "git+https://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@github.com/openai/mcp.git@main"
 pip install -r requirements-temp.txt
+
