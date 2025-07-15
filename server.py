@@ -5,7 +5,6 @@ from mcp import ServerSession
 
 app = FastAPI()
 
-# ✅ CORSMiddleware setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -25,12 +24,25 @@ async def options_handler():
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     print("✅ /mcp endpoint hit")
+    body = await request.body()
+    response_data = b""
+
+    async def read_stream():
+        return body
+
+    async def write_stream(data: bytes):
+        nonlocal response_data
+        response_data = data
 
     try:
-        session = await ServerSession.from_fastapi(request)
-        response = await session.run()
-        return Response(content=response, media_type="application/json")
-
+        session = ServerSession(read_stream, write_stream, init_options={})
+        await session.run()
+        return Response(content=response_data, media_type="application/json")
     except Exception as e:
-        print(f"❌ MCP session error: {e}")
-        return Response(content=b'{"error": "Internal MCP failure"}', media_type="application/json", status_code=500)
+        print(f"❌ MCP processing error: {e}")
+        return Response(
+            content=b'{"error": "MCP session failed"}',
+            media_type="application/json",
+            status_code=500
+        )
+
