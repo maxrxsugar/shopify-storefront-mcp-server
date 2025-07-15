@@ -30,4 +30,3 @@ async def handle_mcp(request: Request):
 
     # ✅ Ensure raw bytes response
     return Response(content=response, media_type="application/json")
-
