@@ -1,3 +1,4 @@
+# server.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import openai
@@ -10,7 +11,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://startling-rolypoly-956344.netlify.app"],  # ✅ update if needed
+    allow_origins=["https://startling-rolypoly-956344.netlify.app"],  # your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,21 +22,18 @@ def root():
     return {"status": "ok"}
 
 @app.post("/mcp")
-async def mcp_endpoint(request: Request):
+async def mcp_handler(request: Request):
     data = await request.json()
-    user_input = data.get("message")
+    message = data.get("message", "")
 
-    if not user_input:
-        return {"error": "Missing 'message' in request body."}
-
-    # Step 1: Create a new thread
+    # Step 1: Create a thread
     thread = openai.beta.threads.create()
 
-    # Step 2: Add the user's message to the thread
+    # Step 2: Send the user message
     openai.beta.threads.messages.create(
         thread_id=thread.id,
         role="user",
-        content=user_input,
+        content=message
     )
 
     # Step 3: Run the assistant
@@ -44,18 +42,22 @@ async def mcp_endpoint(request: Request):
         assistant_id=assistant_id,
     )
 
-    # Step 4: Wait for the run to complete (polling)
-    import time
+    # Step 4: Poll until complete
     while True:
         run_status = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-        if run_status.status in ["completed", "failed", "cancelled"]:
+        if run_status.status == "completed":
             break
-        time.sleep(1)
-
-    # Step 5: Get the response message
+        elif run_status.status == "failed":
+            return {"error": "Run failed"}
+    
+    # Step 5: Retrieve messages
     messages = openai.beta.threads.messages.list(thread_id=thread.id)
-    response = next(
-        (msg for msg in reversed(messages.data) if msg.role == "assistant"), None
-    )
+    assistant_messages = [
+        m.content[0].text.value for m in messages.data if m.role == "assistant"
+    ]
 
-    return {"reply": response.content[0].text.value if response else "No reply."}
+    # ✅ Return structured response for frontend
+    return {
+        "role": "assistant",
+        "content": assistant_messages[0] if assistant_messages else "No response from assistant."
+    }
