@@ -8,5 +8,8 @@ source .venv/bin/activate
 # ✅ Upgrade pip
 pip install --upgrade pip
 
-# ✅ Install requirements, which should include mcp==1.11.0
+# ❌ REMOVE this line if it still exists
+# pip install --force-reinstall mcp==1.10.1  <-- DELETE this
+
+# ✅ Install from clean requirements
 pip install -r requirements-temp.txt
