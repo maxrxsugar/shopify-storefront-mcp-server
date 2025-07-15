@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.integrations.fastapi import chat  # ✅ THIS is correct for v1.10.1
+from mcp.fastapi import chat  # ✅ This IS correct for mcp==1.10.1
 
 app = FastAPI()
 
@@ -20,4 +20,5 @@ def root():
 async def mcp_endpoint(request: Request):
     body = await request.json()
     return await chat(body)
+
 
