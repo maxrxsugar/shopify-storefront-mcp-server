@@ -139,4 +139,5 @@ async def get_product_details(request: Request):
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
-        price = f"{price
+        price = f"{price_info['amount']} {price_info['currencyCode']}"
+
