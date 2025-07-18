@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import openai
 import os
 import time
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -75,4 +76,65 @@ async def mcp_handler(request: Request):
     except Exception as e:
         return {"error": f"Server error: {str(e)}"}
 
+
+@app.post("/get-product-details")
+async def get_product_details(request: Request):
+    data = await request.json()
+    product_name = data.get("productName")
+
+    if not product_name:
+        return {"reply": "Missing product name."}
+
+    shopify_domain = "rxsugar.myshopify.com"
+    access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
+
+    query = '''
+    {
+      products(first: 1, query: "%s") {
+        edges {
+          node {
+            title
+            description
+            variants(first: 1) {
+              edges {
+                node {
+                  price {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    ''' % product_name
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Shopify-Storefront-Access-Token": access_token
+    }
+
+    try:
+        response = requests.post(
+            f"https://{shopify_domain}/api/2023-04/graphql.json",
+            json={"query": query},
+            headers=headers
+        )
+        result = response.json()
+        product = result["data"]["products"]["edges"][0]["node"]
+
+        title = product["title"]
+        description = product["description"]
+        price_info = product["variants"]["edges"][0]["node"]["price"]
+        price = f"{price_info['amount']} {price_info['currencyCode']}"
+
+        return {
+            "reply": f"{title}: {description} Price: {price}"
+        }
+
+    except Exception as e:
+        print("Shopify error:", e)
+        return {"reply": "Sorry, there was a problem fetching the product info."}
 
