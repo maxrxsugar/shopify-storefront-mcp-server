@@ -53,7 +53,7 @@ def test_shopify():
 
     try:
         response = requests.post(
-            f"https://{shopify_domain}/api/2024-04/graphql.json",
+            f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
             timeout=30
@@ -172,31 +172,29 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # Escape quotes in product name to prevent GraphQL errors
-    safe_product_name = product_name.replace('"', '\\"')
-
-    query = f'''
-    {{
-      products(first: 1, query: "{safe_product_name}") {{
-        edges {{
-          node {{
+    # ✅ UPDATED GRAPHQL QUERY FOR BETTER MATCHING
+    query = '''
+    {
+      products(first: 1, query: "title:'%s'") {
+        edges {
+          node {
             title
             description
-            variants(first: 1) {{
-              edges {{
-                node {{
-                  price {{
+            variants(first: 1) {
+              edges {
+                node {
+                  price {
                     amount
                     currencyCode
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    '''
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    ''' % product_name.replace('"', '\\"')
 
     headers = {
         "Content-Type": "application/json",
@@ -205,7 +203,7 @@ async def get_product_details(request: Request):
 
     try:
         response = requests.post(
-            f"https://{shopify_domain}/api/2024-04/graphql.json",
+            f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
             timeout=30
@@ -231,6 +229,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
