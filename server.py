@@ -76,7 +76,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=20
+                                timeout=30
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -133,8 +133,8 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # ✅ Escape properly for GraphQL
-    escaped_name = json.dumps(product_name)
+    # ✅ Escape safely for GraphQL string
+    escaped_name = json.dumps(f"title:*{product_name}*")
 
     query = f'''
     {{
@@ -168,12 +168,17 @@ async def get_product_details(request: Request):
         response = requests.post(
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
-            headers=headers
+            headers=headers,
+            timeout=20
         )
         result = response.json()
 
+        if "errors" in result:
+            print("🛑 Shopify returned errors:", result)
+            return {"reply": "The product could not be found or matched. Try rephrasing it!"}
+
         if "data" not in result or "products" not in result["data"] or not result["data"]["products"]["edges"]:
-            print("🛑 No matching product found or bad structure:", result)
+            print("🛑 No matching product found:", result)
             return {"reply": "Sorry, I couldn’t find that product in the store."}
 
         product = result["data"]["products"]["edges"][0]["node"]
@@ -190,6 +195,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
