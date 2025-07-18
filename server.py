@@ -37,8 +37,11 @@ async def mcp_handler(request: Request):
         return {"error": "Message content must be non-empty."}
 
     try:
+        print("📩 User message received:", message)
+
         # Create thread
         thread = openai.beta.threads.create()
+        print("🧵 Created thread:", thread.id)
 
         # Add user message
         openai.beta.threads.messages.create(
@@ -46,12 +49,14 @@ async def mcp_handler(request: Request):
             role="user",
             content=message
         )
+        print("💬 Message added to thread")
 
         # Start assistant run
         run = openai.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID
         )
+        print("🚀 Assistant run started:", run.id)
 
         # 🌀 Loop: handle tool calls if required
         while True:
@@ -59,6 +64,7 @@ async def mcp_handler(request: Request):
                 thread_id=thread.id,
                 run_id=run.id
             )
+            print("🔁 Run status:", run_status.status)
 
             if run_status.status == "requires_action":
                 tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
@@ -71,18 +77,21 @@ async def mcp_handler(request: Request):
                     print(f"🔧 Function call: {func_name} with args: {args}")
 
                     if func_name == "getProductDetails":
-                        # Call our internal endpoint
+                        # ✅ Call Render endpoint (not localhost)
                         response = requests.post(
-                            "http://localhost:10000/get-product-details",
+                            "https://rxshopifympc.onrender.com/get-product-details",
                             json=args
                         )
                         result = response.json()
+                        print("📬 Shopify function result:", result)
+
                         tool_outputs.append({
                             "tool_call_id": call.id,
                             "output": result["reply"]
                         })
 
                 # Submit tool outputs back to OpenAI
+                print("📤 Submitting tool outputs...")
                 run = openai.beta.threads.runs.submit_tool_outputs(
                     thread_id=thread.id,
                     run_id=run.id,
@@ -90,8 +99,10 @@ async def mcp_handler(request: Request):
                 )
 
             elif run_status.status == "completed":
+                print("✅ Assistant run completed.")
                 break
             elif run_status.status == "failed":
+                print("❌ Assistant run failed.")
                 return {"error": f"Run failed: {run_status.last_error}"}
 
             time.sleep(1)
@@ -103,12 +114,12 @@ async def mcp_handler(request: Request):
             return {"error": "No reply received from assistant."}
 
         reply = messages.data[0].content[0].text.value
-
         print("🧠 Final assistant reply:", reply)
 
         return {"reply": reply}
 
     except Exception as e:
+        print("💥 Server error:", str(e))
         return {"error": f"Server error: {str(e)}"}
 
 
@@ -172,5 +183,6 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
