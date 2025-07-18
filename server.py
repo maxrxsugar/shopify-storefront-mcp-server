@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# ✅ CORS setup
+# ✅ CORS fix
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -27,7 +27,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def root():
     return {"status": "ok"}
 
-
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     data = await request.json()
@@ -39,11 +38,9 @@ async def mcp_handler(request: Request):
     try:
         print("📩 User message received:", message)
 
-        # Create thread
         thread = openai.beta.threads.create()
         print("🧵 Created thread:", thread.id)
 
-        # Add user message
         openai.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -51,14 +48,12 @@ async def mcp_handler(request: Request):
         )
         print("💬 Message added to thread")
 
-        # Start assistant run
         run = openai.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID
         )
         print("🚀 Assistant run started:", run.id)
 
-        # Poll for completion or required action
         while True:
             run_status = openai.beta.threads.runs.retrieve(
                 thread_id=thread.id,
@@ -73,6 +68,7 @@ async def mcp_handler(request: Request):
                 for call in tool_calls:
                     func_name = call.function.name
                     args = json.loads(call.function.arguments)
+
                     print(f"🔧 Function call: {func_name} with args: {args}")
 
                     if func_name == "getProductDetails":
@@ -84,15 +80,16 @@ async def mcp_handler(request: Request):
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
+
                             tool_outputs.append({
                                 "tool_call_id": call.id,
-                                "output": result["reply"]
+                                "output": result.get("reply", "No reply.")
                             })
                         except Exception as e:
-                            print("❌ Error calling function endpoint:", str(e))
+                            print("❌ Error calling function endpoint:", e)
                             tool_outputs.append({
                                 "tool_call_id": call.id,
-                                "output": "Sorry, there was a problem calling the product lookup service."
+                                "output": "Sorry, there was an error fetching product details."
                             })
 
                 print("📤 Submitting tool outputs...")
@@ -111,19 +108,18 @@ async def mcp_handler(request: Request):
 
             time.sleep(1)
 
-        # Fetch assistant reply
         messages = openai.beta.threads.messages.list(thread_id=thread.id)
         if not messages.data or not messages.data[0].content:
             return {"error": "No reply received from assistant."}
 
         reply = messages.data[0].content[0].text.value
         print("🧠 Final assistant reply:", reply)
+
         return {"reply": reply}
 
     except Exception as e:
         print("💥 Server error:", str(e))
         return {"error": f"Server error: {str(e)}"}
-
 
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
@@ -136,7 +132,7 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # 🛠️ Updated query with explicit title search
+    # 🔍 Exact title search using Shopify GraphQL search syntax
     query = '''
     {
       products(first: 1, query: "title:'%s'") {
@@ -170,15 +166,21 @@ async def get_product_details(request: Request):
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
-            timeout=15
+            timeout=20
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
 
-        if "data" not in result or not result["data"]["products"]["edges"]:
-            return {"reply": "Sorry, I couldn't find that product on our store."}
+        if "errors" in result:
+            print("🛑 Shopify returned errors:", result["errors"])
+            return {"reply": "Sorry, there was a problem fetching the product info."}
 
-        product = result["data"]["products"]["edges"][0]["node"]
+        product_data = result.get("data", {}).get("products", {}).get("edges", [])
+        if not product_data:
+            print("🛑 No matching product found or bad structure:", result)
+            return {"reply": "Product not found or no details available."}
+
+        product = product_data[0]["node"]
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
@@ -189,14 +191,8 @@ async def get_product_details(request: Request):
         }
 
     except Exception as e:
-        print("❌ Shopify error:", e)
+        print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
-
-
-
-
-
 
 
 
