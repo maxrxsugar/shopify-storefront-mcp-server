@@ -6,12 +6,10 @@ import time
 import requests
 import json
 from dotenv import load_dotenv
-from fastapi.testclient import TestClient
 
 load_dotenv()
 
 app = FastAPI()
-client = TestClient(app)
 
 # ✅ CORS fix
 app.add_middleware(
@@ -28,7 +26,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 @app.get("/")
 def root():
     return {"status": "ok"}
-
 
 @app.post("/mcp")
 async def mcp_handler(request: Request):
@@ -79,9 +76,13 @@ async def mcp_handler(request: Request):
                     print(f"🔧 Function call: {func_name} with args: {args}")
 
                     if func_name == "getProductDetails":
+                        # ✅ Call Render endpoint (not localhost)
                         try:
-                            # 🔁 Call internal route using TestClient
-                            response = client.post("/get-product-details", json=args)
+                            response = requests.post(
+                                "https://rxshopifympc.onrender.com/get-product-details",
+                                json=args,
+                                timeout=20
+                            )
                             result = response.json()
                             print("📬 Shopify function result:", result)
 
@@ -90,8 +91,11 @@ async def mcp_handler(request: Request):
                                 "output": result["reply"]
                             })
                         except Exception as e:
-                            print("❌ Error in internal function call:", str(e))
-                            return {"error": f"Tool call failed: {str(e)}"}
+                            print("❌ Error calling function endpoint:", e)
+                            tool_outputs.append({
+                                "tool_call_id": call.id,
+                                "output": "Sorry, there was an error retrieving product details."
+                            })
 
                 # Submit tool outputs back to OpenAI
                 print("📤 Submitting tool outputs...")
@@ -124,7 +128,6 @@ async def mcp_handler(request: Request):
     except Exception as e:
         print("💥 Server error:", str(e))
         return {"error": f"Server error: {str(e)}"}
-
 
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
@@ -172,6 +175,12 @@ async def get_product_details(request: Request):
             headers=headers
         )
         result = response.json()
+
+        # ✅ Defensive check
+        if "data" not in result or "products" not in result["data"] or not result["data"]["products"]["edges"]:
+            print("🛑 No matching product found or bad structure:", result)
+            return {"reply": "Sorry, I couldn’t find that product in the store."}
+
         product = result["data"]["products"]["edges"][0]["node"]
 
         title = product["title"]
@@ -186,6 +195,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
