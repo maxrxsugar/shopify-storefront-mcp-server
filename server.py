@@ -59,7 +59,7 @@ async def mcp_handler(request: Request):
                 run_id=run.id
             )
 
-            # ✅ Add logging if assistant triggers a function call
+            # ✅ Log if assistant triggers a function
             if run_status.status == "requires_action" and run_status.required_action:
                 tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
                 for call in tool_calls:
@@ -133,7 +133,7 @@ async def get_product_details(request: Request):
             json={"query": query},
             headers=headers
         )
-                result = response.json()
+        result = response.json()
         product = result["data"]["products"]["edges"][0]["node"]
 
         title = product["title"]
@@ -148,4 +148,5 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
