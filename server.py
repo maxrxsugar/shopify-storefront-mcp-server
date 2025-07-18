@@ -81,7 +81,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=10  # Optional: timeout safeguard
+                                timeout=20
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -91,8 +91,8 @@ async def mcp_handler(request: Request):
                                 "output": result["reply"]
                             })
                         except Exception as e:
-                            print("❌ Error calling function endpoint:", e)
-                            return {"error": "Function call failed."}
+                            print("❌ Error calling function endpoint:", str(e))
+                            return {"error": f"Tool call failed: {str(e)}"}
 
                 # Submit tool outputs back to OpenAI
                 print("📤 Submitting tool outputs...")
@@ -170,12 +170,16 @@ async def get_product_details(request: Request):
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
-            timeout=10  # ✅ Optional: prevent indefinite hang
+            timeout=20  # ⏱ Increased timeout
         )
         result = response.json()
 
-        product = result["data"]["products"]["edges"][0]["node"]
+        # 🛡 Safety checks
+        product_edges = result.get("data", {}).get("products", {}).get("edges", [])
+        if not product_edges:
+            return {"reply": "Sorry, I couldn't find that product in our catalog."}
 
+        product = product_edges[0]["node"]
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
@@ -188,6 +192,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
