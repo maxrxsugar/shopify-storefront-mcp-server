@@ -4,6 +4,7 @@ import openai
 import os
 import time
 import requests
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -57,6 +58,16 @@ async def mcp_handler(request: Request):
                 thread_id=thread.id,
                 run_id=run.id
             )
+
+            # ✅ Add logging if assistant triggers a function call
+            if run_status.status == "requires_action" and run_status.required_action:
+                tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
+                for call in tool_calls:
+                    print(f"🔧 Function call detected: {call.function.name}")
+                    if call.function.name == "getProductDetails":
+                        product_name = json.loads(call.function.arguments)["productName"]
+                        print(f"🔍 Received function call for product: {product_name}")
+
             if run_status.status == "completed":
                 break
             elif run_status.status == "failed":
@@ -128,13 +139,4 @@ async def get_product_details(request: Request):
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
-        price = f"{price_info['amount']} {price_info['currencyCode']}"
-
-        return {
-            "reply": f"{title}: {description} Price: {price}"
-        }
-
-    except Exception as e:
-        print("Shopify error:", e)
-        return {"reply": "Sorry, there was a problem fetching the product info."}
-
+        price = f"{price
