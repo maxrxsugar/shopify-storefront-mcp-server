@@ -11,6 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
+# ✅ CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -37,9 +38,12 @@ async def mcp_handler(request: Request):
 
     try:
         print("📩 User message received:", message)
+
+        # Create thread
         thread = openai.beta.threads.create()
         print("🧵 Created thread:", thread.id)
 
+        # Add user message
         openai.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -47,12 +51,14 @@ async def mcp_handler(request: Request):
         )
         print("💬 Message added to thread")
 
+        # Start assistant run
         run = openai.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID
         )
         print("🚀 Assistant run started:", run.id)
 
+        # Poll for completion or required action
         while True:
             run_status = openai.beta.threads.runs.retrieve(
                 thread_id=thread.id,
@@ -78,7 +84,6 @@ async def mcp_handler(request: Request):
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
-
                             tool_outputs.append({
                                 "tool_call_id": call.id,
                                 "output": result["reply"]
@@ -87,7 +92,7 @@ async def mcp_handler(request: Request):
                             print("❌ Error calling function endpoint:", str(e))
                             tool_outputs.append({
                                 "tool_call_id": call.id,
-                                "output": "There was an error fetching product info."
+                                "output": "Sorry, there was a problem calling the product lookup service."
                             })
 
                 print("📤 Submitting tool outputs...")
@@ -106,13 +111,13 @@ async def mcp_handler(request: Request):
 
             time.sleep(1)
 
+        # Fetch assistant reply
         messages = openai.beta.threads.messages.list(thread_id=thread.id)
         if not messages.data or not messages.data[0].content:
             return {"error": "No reply received from assistant."}
 
         reply = messages.data[0].content[0].text.value
         print("🧠 Final assistant reply:", reply)
-
         return {"reply": reply}
 
     except Exception as e:
@@ -131,76 +136,62 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    def build_query(name):
-        return {
-            "query": f'''
-            {{
-              products(first: 1, query: "{name}") {{
-                edges {{
-                  node {{
-                    title
-                    description
-                    variants(first: 1) {{
-                      edges {{
-                        node {{
-                          price {{
-                            amount
-                            currencyCode
-                          }}
-                        }}
-                      }}
-                    }}
-                  }}
-                }}
-              }}
-            }}
-            '''
+    # 🛠️ Updated query with explicit title search
+    query = '''
+    {
+      products(first: 1, query: "title:'%s'") {
+        edges {
+          node {
+            title
+            description
+            variants(first: 1) {
+              edges {
+                node {
+                  price {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
         }
+      }
+    }
+    ''' % product_name
 
     headers = {
         "Content-Type": "application/json",
         "X-Shopify-Storefront-Access-Token": access_token
     }
 
-    search_attempts = [
-        product_name,
-        f'title:{product_name}',
-        ' '.join(product_name.split()[:2])
-    ]
+    try:
+        response = requests.post(
+            f"https://{shopify_domain}/api/2023-04/graphql.json",
+            json={"query": query},
+            headers=headers,
+            timeout=15
+        )
+        result = response.json()
+        print("🔍 Raw Shopify response:", result)
 
-    for attempt in search_attempts:
-        try:
-            response = requests.post(
-                f"https://{shopify_domain}/api/2023-04/graphql.json",
-                json=build_query(attempt),
-                headers=headers,
-                timeout=10
-            )
-            result = response.json()
+        if "data" not in result or not result["data"]["products"]["edges"]:
+            return {"reply": "Sorry, I couldn't find that product on our store."}
 
-            if "errors" in result:
-                print("🛑 Shopify returned errors:", result)
-                continue
+        product = result["data"]["products"]["edges"][0]["node"]
+        title = product["title"]
+        description = product["description"]
+        price_info = product["variants"]["edges"][0]["node"]["price"]
+        price = f"{price_info['amount']} {price_info['currencyCode']}"
 
-            edges = result["data"]["products"]["edges"]
-            if not edges:
-                print(f"❌ No product match found with query: {attempt}")
-                continue
+        return {
+            "reply": f"{title}: {description} Price: {price}"
+        }
 
-            product = edges[0]["node"]
-            title = product["title"]
-            description = product["description"]
-            price_info = product["variants"]["edges"][0]["node"]["price"]
-            price = f"{price_info['amount']} {price_info['currencyCode']}"
+    except Exception as e:
+        print("❌ Shopify error:", e)
+        return {"reply": "Sorry, there was a problem fetching the product info."}
 
-            return {
-                "reply": f"{title}: {description} Price: {price}"
-            }
-
-        except Exception as e:
-            print("Shopify error during attempt:", attempt, "| Error:", e)
-
-    return {"reply": "Sorry, there was a problem fetching the product info or no matching product was found."}
 
 
 
