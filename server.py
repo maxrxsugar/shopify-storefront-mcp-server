@@ -59,7 +59,7 @@ async def mcp_handler(request: Request):
                 run_id=run.id
             )
 
-            # ✅ Log if assistant triggers a function
+            # ✅ Log function calls
             if run_status.status == "requires_action" and run_status.required_action:
                 tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
                 for call in tool_calls:
@@ -81,6 +81,7 @@ async def mcp_handler(request: Request):
             return {"error": "No reply received from assistant."}
 
         reply = messages.data[0].content[0].text.value
+        print("🧠 Assistant replied with plain text:", reply)  # 👈 New log line here
 
         return {"reply": reply}
 
@@ -148,5 +149,4 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
 
