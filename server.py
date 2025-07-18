@@ -38,11 +38,9 @@ async def mcp_handler(request: Request):
     try:
         print("📩 User message received:", message)
 
-        # Create thread
         thread = openai.beta.threads.create()
         print("🧵 Created thread:", thread.id)
 
-        # Add user message
         openai.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -50,14 +48,12 @@ async def mcp_handler(request: Request):
         )
         print("💬 Message added to thread")
 
-        # Start assistant run
         run = openai.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID
         )
         print("🚀 Assistant run started:", run.id)
 
-        # 🌀 Loop: handle tool calls if required
         while True:
             run_status = openai.beta.threads.runs.retrieve(
                 thread_id=thread.id,
@@ -76,7 +72,6 @@ async def mcp_handler(request: Request):
                     print(f"🔧 Function call: {func_name} with args: {args}")
 
                     if func_name == "getProductDetails":
-                        # ✅ Call Render endpoint (not localhost)
                         try:
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
@@ -97,7 +92,6 @@ async def mcp_handler(request: Request):
                                 "output": "Sorry, there was an error retrieving product details."
                             })
 
-                # Submit tool outputs back to OpenAI
                 print("📤 Submitting tool outputs...")
                 run = openai.beta.threads.runs.submit_tool_outputs(
                     thread_id=thread.id,
@@ -114,9 +108,7 @@ async def mcp_handler(request: Request):
 
             time.sleep(1)
 
-        # Fetch assistant reply
         messages = openai.beta.threads.messages.list(thread_id=thread.id)
-
         if not messages.data or not messages.data[0].content:
             return {"error": "No reply received from assistant."}
 
@@ -129,6 +121,7 @@ async def mcp_handler(request: Request):
         print("💥 Server error:", str(e))
         return {"error": f"Server error: {str(e)}"}
 
+
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
     data = await request.json()
@@ -140,28 +133,31 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    query = '''
-    {
-      products(first: 1, query: "%s") {
-        edges {
-          node {
+    # ✅ Escape properly for GraphQL
+    escaped_name = json.dumps(product_name)
+
+    query = f'''
+    {{
+      products(first: 1, query: {escaped_name}) {{
+        edges {{
+          node {{
             title
             description
-            variants(first: 1) {
-              edges {
-                node {
-                  price {
+            variants(first: 1) {{
+              edges {{
+                node {{
+                  price {{
                     amount
                     currencyCode
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    ''' % product_name
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    '''
 
     headers = {
         "Content-Type": "application/json",
@@ -176,7 +172,6 @@ async def get_product_details(request: Request):
         )
         result = response.json()
 
-        # ✅ Defensive check
         if "data" not in result or "products" not in result["data"] or not result["data"]["products"]["edges"]:
             print("🛑 No matching product found or bad structure:", result)
             return {"reply": "Sorry, I couldn’t find that product in the store."}
@@ -195,6 +190,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
