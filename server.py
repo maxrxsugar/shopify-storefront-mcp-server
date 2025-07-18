@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# ✅ CORS fix
+# ✅ CORS config
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://startling-rolypoly-956344.netlify.app"],
@@ -34,12 +34,14 @@ def test_shopify():
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
+    # 🧪 Hardcoded product title test
     query = '''
     {
-      products(first: 1) {
+      products(first: 1, query: "title:'RxSugar Cereal Pro'") {
         edges {
           node {
             title
+            description
           }
         }
       }
@@ -172,10 +174,9 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # ✅ UPDATED GRAPHQL QUERY FOR BETTER MATCHING
     query = '''
     {
-      products(first: 1, query: "title:'%s'") {
+      products(first: 1, query: "%s") {
         edges {
           node {
             title
@@ -194,7 +195,7 @@ async def get_product_details(request: Request):
         }
       }
     }
-    ''' % product_name.replace('"', '\\"')
+    ''' % product_name
 
     headers = {
         "Content-Type": "application/json",
@@ -229,6 +230,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
