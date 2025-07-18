@@ -27,7 +27,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def root():
     return {"status": "ok"}
 
-
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     data = await request.json()
@@ -78,17 +77,22 @@ async def mcp_handler(request: Request):
 
                     if func_name == "getProductDetails":
                         # ✅ Call Render endpoint (not localhost)
-                        response = requests.post(
-                            "https://rxshopifympc.onrender.com/get-product-details",
-                            json=args
-                        )
-                        result = response.json()
-                        print("📬 Shopify function result:", result)
+                        try:
+                            response = requests.post(
+                                "https://rxshopifympc.onrender.com/get-product-details",
+                                json=args,
+                                timeout=10  # Optional: timeout safeguard
+                            )
+                            result = response.json()
+                            print("📬 Shopify function result:", result)
 
-                        tool_outputs.append({
-                            "tool_call_id": call.id,
-                            "output": result["reply"]
-                        })
+                            tool_outputs.append({
+                                "tool_call_id": call.id,
+                                "output": result["reply"]
+                            })
+                        except Exception as e:
+                            print("❌ Error calling function endpoint:", e)
+                            return {"error": "Function call failed."}
 
                 # Submit tool outputs back to OpenAI
                 print("📤 Submitting tool outputs...")
@@ -121,7 +125,6 @@ async def mcp_handler(request: Request):
     except Exception as e:
         print("💥 Server error:", str(e))
         return {"error": f"Server error: {str(e)}"}
-
 
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
@@ -166,9 +169,11 @@ async def get_product_details(request: Request):
         response = requests.post(
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
-            headers=headers
+            headers=headers,
+            timeout=10  # ✅ Optional: prevent indefinite hang
         )
         result = response.json()
+
         product = result["data"]["products"]["edges"][0]["node"]
 
         title = product["title"]
@@ -183,6 +188,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
