@@ -133,11 +133,19 @@ async def get_product_details(request: Request):
             json={"query": query},
             headers=headers
         )
-        result = response.json()
+                result = response.json()
         product = result["data"]["products"]["edges"][0]["node"]
 
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
         price = f"{price_info['amount']} {price_info['currencyCode']}"
+
+        return {
+            "reply": f"{title}: {description} Price: {price}"
+        }
+
+    except Exception as e:
+        print("Shopify error:", e)
+        return {"reply": "Sorry, there was a problem fetching the product info."}
 
