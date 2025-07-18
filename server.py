@@ -27,6 +27,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def root():
     return {"status": "ok"}
 
+
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     data = await request.json()
@@ -39,7 +40,7 @@ async def mcp_handler(request: Request):
         # Create thread
         thread = openai.beta.threads.create()
 
-        # Add message
+        # Add user message
         openai.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -52,26 +53,47 @@ async def mcp_handler(request: Request):
             assistant_id=ASSISTANT_ID
         )
 
-        # Poll for completion
+        # 🌀 Loop: handle tool calls if required
         while True:
             run_status = openai.beta.threads.runs.retrieve(
                 thread_id=thread.id,
                 run_id=run.id
             )
 
-            # ✅ Log function calls
-            if run_status.status == "requires_action" and run_status.required_action:
+            if run_status.status == "requires_action":
                 tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
-                for call in tool_calls:
-                    print(f"🔧 Function call detected: {call.function.name}")
-                    if call.function.name == "getProductDetails":
-                        product_name = json.loads(call.function.arguments)["productName"]
-                        print(f"🔍 Received function call for product: {product_name}")
+                tool_outputs = []
 
-            if run_status.status == "completed":
+                for call in tool_calls:
+                    func_name = call.function.name
+                    args = json.loads(call.function.arguments)
+
+                    print(f"🔧 Function call: {func_name} with args: {args}")
+
+                    if func_name == "getProductDetails":
+                        # Call our internal endpoint
+                        response = requests.post(
+                            "http://localhost:10000/get-product-details",
+                            json=args
+                        )
+                        result = response.json()
+                        tool_outputs.append({
+                            "tool_call_id": call.id,
+                            "output": result["reply"]
+                        })
+
+                # Submit tool outputs back to OpenAI
+                run = openai.beta.threads.runs.submit_tool_outputs(
+                    thread_id=thread.id,
+                    run_id=run.id,
+                    tool_outputs=tool_outputs
+                )
+
+            elif run_status.status == "completed":
                 break
             elif run_status.status == "failed":
                 return {"error": f"Run failed: {run_status.last_error}"}
+
             time.sleep(1)
 
         # Fetch assistant reply
@@ -81,7 +103,8 @@ async def mcp_handler(request: Request):
             return {"error": "No reply received from assistant."}
 
         reply = messages.data[0].content[0].text.value
-        print("🧠 Assistant replied with plain text:", reply)  # 👈 New log line here
+
+        print("🧠 Final assistant reply:", reply)
 
         return {"reply": reply}
 
@@ -149,4 +172,5 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
