@@ -210,9 +210,10 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
+    # 🔁 Updated query with partial title match using title:*search*
     query = '''
     {
-      products(first: 1, query: "%s") {
+      products(first: 1, query: "title:*%s*") {
         edges {
           node {
             title
