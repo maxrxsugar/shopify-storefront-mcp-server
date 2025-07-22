@@ -210,29 +210,26 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # 🔁 Updated query with partial title match using title:*search*
-    query = '''
-    {
-      products(first: 1, query: "title:*%s*") {
-        edges {
-          node {
+    # ✅ Final working query format (no nested price)
+    query = f'''
+    {{
+      products(first: 1, query: "{product_name}") {{
+        edges {{
+          node {{
             title
             description
-            variants(first: 1) {
-              edges {
-                node {
-                  price {
-                    amount
-                    currencyCode
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    ''' % product_name
+            variants(first: 1) {{
+              edges {{
+                node {{
+                  price
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    '''
 
     headers = {
         "Content-Type": "application/json",
@@ -244,7 +241,7 @@ async def get_product_details(request: Request):
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
-            timeout=30
+            timeout=60
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
@@ -257,8 +254,7 @@ async def get_product_details(request: Request):
         product = product_edges[0]["node"]
         title = product["title"]
         description = product["description"]
-        price_info = product["variants"]["edges"][0]["node"]["price"]
-        price = f"{price_info['amount']} {price_info['currencyCode']}"
+        price = product["variants"]["edges"][0]["node"]["price"]
 
         return {
             "reply": f"{title}: {description} Price: {price}"
@@ -267,6 +263,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
