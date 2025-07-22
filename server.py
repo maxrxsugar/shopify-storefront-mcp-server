@@ -149,7 +149,6 @@ async def mcp_handler(request: Request):
 
                     if func_name == "getProductDetails":
                         try:
-                            # ✅ Use localhost loopback for internal request
                             response = requests.post(
                                 "http://127.0.0.1:10000/get-product-details",
                                 json=args,
@@ -213,7 +212,7 @@ async def get_product_details(request: Request):
 
     query = f'''
     {{
-      products(first: 1, query: "{product_name}") {{
+      products(first: 5, query: "title:*{product_name}*") {{
         edges {{
           node {{
             title
@@ -247,11 +246,11 @@ async def get_product_details(request: Request):
             timeout=90
         )
         result = response.json()
-        print("🔍 Raw Shopify response:", result)
+        print("🔍 Raw Shopify response:", json.dumps(result, indent=2))
 
         product_edges = result.get("data", {}).get("products", {}).get("edges", [])
         if not product_edges:
-            print("🛑 No matching product found or bad structure:", result)
+            print("🛑 No matching product found or bad structure.")
             return {"reply": "Sorry, I couldn't find that product in our store."}
 
         product = product_edges[0]["node"]
@@ -267,6 +266,8 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
+
 
 
 
