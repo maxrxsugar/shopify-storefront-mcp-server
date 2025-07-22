@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import openai
@@ -231,7 +232,7 @@ async def get_product_details(request: Request):
     '''
 
     variables = {
-        "search": f"title:*{product_name}*"
+        "search": product_name
     }
 
     headers = {
@@ -244,7 +245,7 @@ async def get_product_details(request: Request):
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query, "variables": variables},
             headers=headers,
-            timeout=90
+            timeout=60
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
@@ -260,7 +261,7 @@ async def get_product_details(request: Request):
         price = product["variants"]["edges"][0]["node"]["price"]
 
         return {
-            "reply": f"{title}: {description} Price: ${price}"
+            "reply": f"{title}: {description} Price: {price}"
         }
 
     except Exception as e:
