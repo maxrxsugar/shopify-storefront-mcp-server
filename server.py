@@ -152,7 +152,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=90  # ⬅️ Increased from 30 to 90 seconds
+                                timeout=90  # ⬅️ Increased timeout
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -202,7 +202,7 @@ async def mcp_handler(request: Request):
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
     data = await request.json()
-    product_name = data.get("productName")
+    product_name = data.get("productName", "").strip()
 
     if not product_name:
         return {"reply": "Missing product name."}
@@ -210,9 +210,10 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
+    # ✅ Query updated with title: prefix for proper filtering
     query = f'''
     {{
-      products(first: 1, query: "{product_name}") {{
+      products(first: 1, query: "title:{product_name}") {{
         edges {{
           node {{
             title
@@ -262,6 +263,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
