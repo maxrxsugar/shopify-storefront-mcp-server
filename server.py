@@ -56,7 +56,7 @@ def test_shopify():
             f"https://{shopify_domain}/api/2023-04/graphql.json",
             json={"query": query},
             headers=headers,
-            timeout=30
+            timeout=90
         )
         result = response.json()
         print("🔍 Shopify test response:", result)
