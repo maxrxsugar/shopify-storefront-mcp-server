@@ -149,10 +149,11 @@ async def mcp_handler(request: Request):
 
                     if func_name == "getProductDetails":
                         try:
+                            # ✅ Use localhost loopback for internal request
                             response = requests.post(
-                                "https://rxshopifympc.onrender.com/get-product-details",
+                                "http://127.0.0.1:10000/get-product-details",
                                 json=args,
-                                timeout=90  # ⬅️ Still long timeout
+                                timeout=90
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -210,7 +211,6 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # ✅ GraphiQL-confirmed query
     query = f'''
     {{
       products(first: 1, query: "{product_name}") {{
@@ -267,6 +267,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
