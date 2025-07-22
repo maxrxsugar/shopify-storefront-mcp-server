@@ -152,7 +152,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=90  # ⬅️ Increased timeout
+                                timeout=90  # ⬅️ Still long timeout
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -202,7 +202,7 @@ async def mcp_handler(request: Request):
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
     data = await request.json()
-    product_name = data.get("productName", "").strip()
+    product_name = data.get("productName")
 
     if not product_name:
         return {"reply": "Missing product name."}
@@ -210,7 +210,6 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # ✅ Query updated with title: prefix for proper filtering
     query = f'''
     {{
       products(first: 1, query: "title:{product_name}") {{
@@ -221,7 +220,10 @@ async def get_product_details(request: Request):
             variants(first: 1) {{
               edges {{
                 node {{
-                  price
+                  price {{
+                    amount
+                    currencyCode
+                  }}
                 }}
               }}
             }}
@@ -254,7 +256,8 @@ async def get_product_details(request: Request):
         product = product_edges[0]["node"]
         title = product["title"]
         description = product["description"]
-        price = product["variants"]["edges"][0]["node"]["price"]
+        price_info = product["variants"]["edges"][0]["node"]["price"]
+        price = f"{price_info['amount']} {price_info['currencyCode']}"
 
         return {
             "reply": f"{title}: {description} Price: {price}"
