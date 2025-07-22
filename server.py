@@ -22,6 +22,8 @@ app.add_middleware(
 
 ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
+shopify_url = os.getenv("SHOPIFY_STORE_URL")
+access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
 @app.get("/")
 def root():
@@ -29,9 +31,6 @@ def root():
 
 @app.get("/test-shopify")
 def test_shopify():
-    shopify_domain = "rxsugar.myshopify.com"
-    access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
-
     query = '''
     {
       products(first: 1) {
@@ -43,7 +42,6 @@ def test_shopify():
       }
     }
     '''
-
     headers = {
         "Content-Type": "application/json",
         "X-Shopify-Storefront-Access-Token": access_token
@@ -51,7 +49,7 @@ def test_shopify():
 
     try:
         response = requests.post(
-            f"https://{shopify_domain}/api/2023-04/graphql.json",
+            shopify_url,
             json={"query": query},
             headers=headers,
             timeout=30
@@ -65,9 +63,6 @@ def test_shopify():
 
 @app.get("/list-products")
 def list_products():
-    shopify_domain = "rxsugar.myshopify.com"
-    access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
-
     query = '''
     {
       products(first: 5) {
@@ -80,7 +75,6 @@ def list_products():
       }
     }
     '''
-
     headers = {
         "Content-Type": "application/json",
         "X-Shopify-Storefront-Access-Token": access_token
@@ -88,7 +82,7 @@ def list_products():
 
     try:
         response = requests.post(
-            f"https://{shopify_domain}/api/2023-04/graphql.json",
+            shopify_url,
             json={"query": query},
             headers=headers,
             timeout=30
@@ -201,10 +195,6 @@ async def get_product_details(request: Request):
     if not product_name:
         return {"reply": "Missing product name."}
 
-    shopify_domain = "rxsugar.myshopify.com"
-    access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
-
-    # ✅ Partial match query for fuzzy product title support
     query = f'''
     {{
       products(first: 5, query: "{product_name}") {{
@@ -227,7 +217,6 @@ async def get_product_details(request: Request):
       }}
     }}
     '''
-
     headers = {
         "Content-Type": "application/json",
         "X-Shopify-Storefront-Access-Token": access_token
@@ -235,7 +224,7 @@ async def get_product_details(request: Request):
 
     try:
         response = requests.post(
-            f"https://{shopify_domain}/api/2023-04/graphql.json",
+            shopify_url,
             json={"query": query},
             headers=headers,
             timeout=30
@@ -261,6 +250,8 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
+
 
 
 
