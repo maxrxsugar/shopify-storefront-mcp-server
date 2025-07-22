@@ -210,9 +210,10 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
+    # ✅ GraphiQL-confirmed query
     query = f'''
     {{
-      products(first: 1, query: "title:{product_name}") {{
+      products(first: 1, query: "{product_name}") {{
         edges {{
           node {{
             title
@@ -266,6 +267,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
