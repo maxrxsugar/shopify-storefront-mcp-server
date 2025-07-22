@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import openai
@@ -153,7 +152,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=30
+                                timeout=90  # ⬅️ Increased from 30 to 90 seconds
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -211,29 +210,25 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    query = '''
-    query getProductByTitle($search: String!) {
-      products(first: 1, query: $search) {
-        edges {
-          node {
+    query = f'''
+    {{
+      products(first: 1, query: "{product_name}") {{
+        edges {{
+          node {{
             title
             description
-            variants(first: 1) {
-              edges {
-                node {
+            variants(first: 1) {{
+              edges {{
+                node {{
                   price
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
     '''
-
-    variables = {
-        "search": product_name
-    }
 
     headers = {
         "Content-Type": "application/json",
@@ -243,9 +238,9 @@ async def get_product_details(request: Request):
     try:
         response = requests.post(
             f"https://{shopify_domain}/api/2023-04/graphql.json",
-            json={"query": query, "variables": variables},
+            json={"query": query},
             headers=headers,
-            timeout=60
+            timeout=90
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
@@ -267,6 +262,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
