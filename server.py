@@ -27,9 +27,41 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def root():
     return {"status": "ok"}
 
-@app.get("/shopify-health")
-def shopify_health():
-    return {"status": "ok", "store_url": os.getenv("SHOPIFY_STORE_URL")}
+@app.get("/test-shopify")
+def test_shopify():
+    shopify_domain = os.getenv("SHOPIFY_STORE_DOMAIN")  # e.g. nusugar.myshopify.com
+    access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
+
+    query = '''
+    {
+      products(first: 1) {
+        edges {
+          node {
+            title
+          }
+        }
+      }
+    }
+    '''
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Shopify-Storefront-Access-Token": access_token
+    }
+
+    try:
+        response = requests.post(
+            f"https://{shopify_domain}/api/2025-07/graphql.json",
+            json={"query": query},
+            headers=headers,
+            timeout=30
+        )
+        result = response.json()
+        print("🔍 Shopify test response:", result)
+        return result
+    except Exception as e:
+        print("❌ Shopify test error:", str(e))
+        return {"error": str(e)}
 
 @app.post("/mcp")
 async def mcp_handler(request: Request):
@@ -79,7 +111,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=30
+                                timeout=45  # ← Updated timeout!
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -132,12 +164,12 @@ async def get_product_details(request: Request):
     if not product_name:
         return {"reply": "Missing product name."}
 
-    shopify_url = os.getenv("SHOPIFY_STORE_URL")  # Should include full GraphQL path
+    shopify_domain = os.getenv("SHOPIFY_STORE_DOMAIN")  # e.g. nusugar.myshopify.com
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
     query = f'''
     {{
-      products(first: 1, query: "{product_name}") {{
+      products(first: 5, query: "{product_name}") {{
         edges {{
           node {{
             title
@@ -165,7 +197,7 @@ async def get_product_details(request: Request):
 
     try:
         response = requests.post(
-            shopify_url,
+            f"https://{shopify_domain}/api/2025-07/graphql.json",
             json={"query": query},
             headers=headers,
             timeout=30
