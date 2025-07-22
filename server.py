@@ -210,26 +210,29 @@ async def get_product_details(request: Request):
     shopify_domain = "rxsugar.myshopify.com"
     access_token = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
 
-    # ✅ Final working query format (no nested price)
-    query = f'''
-    {{
-      products(first: 1, query: "{product_name}") {{
-        edges {{
-          node {{
+    query = '''
+    query getProductByTitle($search: String!) {
+      products(first: 1, query: $search) {
+        edges {
+          node {
             title
             description
-            variants(first: 1) {{
-              edges {{
-                node {{
+            variants(first: 1) {
+              edges {
+                node {
                   price
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     '''
+
+    variables = {
+        "search": f"title:*{product_name}*"
+    }
 
     headers = {
         "Content-Type": "application/json",
@@ -239,9 +242,9 @@ async def get_product_details(request: Request):
     try:
         response = requests.post(
             f"https://{shopify_domain}/api/2023-04/graphql.json",
-            json={"query": query},
+            json={"query": query, "variables": variables},
             headers=headers,
-            timeout=60
+            timeout=90
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
@@ -257,12 +260,13 @@ async def get_product_details(request: Request):
         price = product["variants"]["edges"][0]["node"]["price"]
 
         return {
-            "reply": f"{title}: {description} Price: {price}"
+            "reply": f"{title}: {description} Price: ${price}"
         }
 
     except Exception as e:
         print("❌ Shopify error:", e)
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
