@@ -212,5 +212,3 @@ async def get_product_details(request: Request):
 
 
 
-
-
