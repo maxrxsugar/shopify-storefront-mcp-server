@@ -78,7 +78,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=120  # reduced timeout for quicker failure
+                                timeout=520  # reduced timeout for quicker failure
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -164,7 +164,7 @@ async def get_product_details(request: Request):
             SHOPIFY_STORE_DOMAIN,
             json={"query": query},
             headers=headers,
-            timeout=20  # make this tight to avoid function timeout
+            timeout=40  # make this tight to avoid function timeout
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
