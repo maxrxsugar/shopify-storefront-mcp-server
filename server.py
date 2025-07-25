@@ -24,7 +24,7 @@ app.add_middleware(
 ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 SHOPIFY_ACCESS_TOKEN = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
-SHOPIFY_STORE_DOMAIN = os.getenv("SHOPIFY_STORE_URL")  # now using the full URL
+SHOPIFY_STORE_DOMAIN = os.getenv("SHOPIFY_STORE_DOMAIN")  # now using the full URL
 
 @app.get("/")
 def root():
