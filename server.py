@@ -164,7 +164,7 @@ async def get_product_details(request: Request):
             SHOPIFY_STORE_DOMAIN,
             json={"query": query},
             headers=headers,
-            timeout=20  # make this tight to avoid function timeout
+            timeout=40  # make this tight to avoid function timeout
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
