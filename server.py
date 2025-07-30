@@ -5,6 +5,7 @@ import os
 import time
 import requests
 import json
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,7 +25,7 @@ app.add_middleware(
 ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 SHOPIFY_ACCESS_TOKEN = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN")
-SHOPIFY_STORE_DOMAIN = os.getenv("SHOPIFY_STORE_DOMAIN")  # now using the full URL
+SHOPIFY_STORE_DOMAIN = os.getenv("SHOPIFY_STORE_DOMAIN")
 
 @app.get("/")
 def root():
@@ -131,40 +132,26 @@ async def get_product_details(request: Request):
     if not product_name:
         return {"reply": "Missing product name."}
 
-    # ✅ Updated product handle mapping
     product_mappings = {
-        "allulose": "rxsugar-allulose-sugar-2-pound-canister",
+        "cereal": "rxsugar-cereal-pro",
+        "cereals": "rxsugar-cereal-pro",
         "sweetener": "rxsugar-allulose-sugar-2-pound-canister",
+        "allulose": "rxsugar-allulose-sugar-2-pound-canister",
         "sugar": "rxsugar-allulose-sugar-2-pound-canister",
         "fiber": "rxsugar-fiber-pro",
         "gummies": "rxsugar-gummies-pro",
         "glp": "craving-control-natural-glp-1-boost-bundle",
-
-        "cereal": "rxsugar-cereal-pro",
-        "cereal pro": "rxsugar-cereal-pro",
-        "cocoa cereal": "rxsugar-cereal-pro-cocoa-crunch",
-        "golden cereal": "rxsugar-cereal-pro-golden-crunch",
+        "sampler": "rxsugar-cereal-pro-sampler-pack",
         "cocoa crunch": "rxsugar-cereal-pro-cocoa-crunch",
         "golden crunch": "rxsugar-cereal-pro-golden-crunch",
-        "cereal sampler": "rxsugar-cereal-pro-sampler-pack",
-
-        "brownie mix": "rxsugar-keto-brownie-mix",
+        "brownie": "rxsugar-keto-brownie-mix",
         "mint brownie": "rxsugar-mint-brownie-swealthy-snax-caddy",
-
-        "swealthy": "rxsugar-swealthy-snax",
-        "snax": "rxsugar-swealthy-snax",
-        "caramel snack": "rxsugar-caramel-swealthy-snax-caddy",
-        "vanilla snack": "rxsugar-vanilla-creme-swealthy-snax-caddy",
-        "chocolate snack": "rxsugar-chocolate-swealthy-snax-caddy",
-
-        "mint brownie single": "rxsugar-mint-brownie-swealthy-snax",
-        "caramel single": "rxsugar-caramel-swealthy-snax",
-        "vanilla creme single": "rxsugar-vanilla-creme-swealthy-snax",
-        "chocolate single": "rxsugar-chocolate-swealthy-snax",
+        "snack": "rxsugar-swealthy-snax",
+        "snacks": "rxsugar-swealthy-snax",
+        "caramel": "rxsugar-caramel-swealthy-snax-caddy",
+        "vanilla": "rxsugar-vanilla-creme-swealthy-snax-caddy",
+        "chocolate": "rxsugar-chocolate-swealthy-snax-caddy",
         "stix": "rxsugar-swealthy-stix",
-
-        "rx sugar": "rxsugar-allulose-sugar-2-pound-canister",
-        "allullose": "rxsugar-allulose-sugar-2-pound-canister",
         "protien": "rxsugar-gummies-pro",
         "vitamine": "rxsugar-gummies-pro"
     }
@@ -172,7 +159,7 @@ async def get_product_details(request: Request):
     mapped_handle = product_mappings.get(product_name)
     if not mapped_handle:
         for keyword, handle in product_mappings.items():
-            if keyword in product_name:
+            if re.search(rf"\\b{re.escape(keyword)}\\b", product_name):
                 mapped_handle = handle
                 break
 
@@ -242,8 +229,6 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", str(e))
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
-
 
 
 
