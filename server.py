@@ -126,56 +126,69 @@ async def mcp_handler(request: Request):
 @app.post("/get-product-details")
 async def get_product_details(request: Request):
     data = await request.json()
-    product_name = data.get("productName", "").strip()
+    product_name = data.get("productName", "").strip().lower()
 
     if not product_name:
         return {"reply": "Missing product name."}
 
-    # 🧠 Keyword-to-handle mapping
+    # ✅ Updated product handle mapping
     product_mappings = {
-        "allulose": "rxsugar-1-pound-canister",
-        "sweetener": "rxsugar-1-pound-canister",
-        "sugar": "rxsugar-1-pound-canister",
-        "stick pack": "rxsugar-30-stick-pack-carton",
-        "sticks": "rxsugar-30-stick-pack-carton",
+        # Core categories
+        "allulose": "rxsugar-allulose-sugar-2-pound-canister",
+        "sweetener": "rxsugar-allulose-sugar-2-pound-canister",
+        "sugar": "rxsugar-allulose-sugar-2-pound-canister",
+        "fiber": "rxsugar-fiber-pro",
+        "gummies": "rxsugar-gummies-pro",
+        "glp": "craving-control-natural-glp-1-boost-bundle",
 
+        # Cereal
         "cereal": "rxsugar-cereal-pro",
+        "cereal pro": "rxsugar-cereal-pro",
         "cocoa cereal": "rxsugar-cereal-pro-cocoa-crunch",
         "golden cereal": "rxsugar-cereal-pro-golden-crunch",
+        "cocoa crunch": "rxsugar-cereal-pro-cocoa-crunch",
+        "golden crunch": "rxsugar-cereal-pro-golden-crunch",
+        "cereal sampler": "rxsugar-cereal-pro-sampler-pack",
 
+        # Brownie & Baking
         "brownie mix": "rxsugar-keto-brownie-mix",
-        "mint brownie": "rxsugar-mint-brownie-swealthy-snax",
+        "mint brownie": "rxsugar-mint-brownie-swealthy-snax-caddy",
 
-        "caramel snack": "rxsugar-caramel-swealthy-snax",
-        "chocolate snack": "rxsugar-chocolate-swealthy-snax",
-        "swealthy": "rxsugar-swealthy-stix",
+        # Swealthy Snax
+        "swealthy": "rxsugar-swealthy-snax",
+        "snax": "rxsugar-swealthy-snax",
+        "caramel snack": "rxsugar-caramel-swealthy-snax-caddy",
+        "vanilla snack": "rxsugar-vanilla-creme-swealthy-snax-caddy",
+        "chocolate snack": "rxsugar-chocolate-swealthy-snax-caddy",
 
-        "gummies": "rxsugar-gummies-pro",
+        # Singles
+        "mint brownie single": "rxsugar-mint-brownie-swealthy-snax",
+        "caramel single": "rxsugar-caramel-swealthy-snax",
+        "vanilla creme single": "rxsugar-vanilla-creme-swealthy-snax",
+        "chocolate single": "rxsugar-chocolate-swealthy-snax",
+        "stix": "rxsugar-swealthy-stix",
 
-        "fiber": "rxsugar-fiber-pro",
-
-        "organic liquid sugar": "organic-liquid-sugar",
-        "caramel syrup": "rxsugar-organic-caramel-syrup",
-        "chocolate syrup": "organic-chocolate-syrup",
-        "cinnamon syrup": "rxsugar-organic-cinnamon-syrup",
-        "hazelnut syrup": "rxsugar-organic-hazelnut-syrup",
-        "pancake syrup": "organic-pancake-syrup",
-        "vanilla syrup": "rxsugar-organic-vanilla-syrup",
-
-        "rxsugar": "rxsugar-1-pound-canister",
-        "rx sugar": "rxsugar-1-pound-canister",
-        "allullose": "rxsugar-1-pound-canister",
-        "syrup": "organic-liquid-sugar",
-        "liquid sweetener": "organic-liquid-sugar",
-        "snack": "rxsugar-caramel-swealthy-snax"
+        # Misspellings / common phrases
+        "rx sugar": "rxsugar-allulose-sugar-2-pound-canister",
+        "allullose": "rxsugar-allulose-sugar-2-pound-canister",
+        "protien": "rxsugar-gummies-pro",
+        "vitamine": "rxsugar-gummies-pro"
     }
 
-    mapped_handle = product_mappings.get(product_name.lower())
+    # Find best match
+    mapped_handle = product_mappings.get(product_name)
+    if not mapped_handle:
+        # Optional: fuzzy contains-match fallback
+        for keyword, handle in product_mappings.items():
+            if keyword in product_name:
+                mapped_handle = handle
+                break
+
     if mapped_handle:
         print(f"🔁 Mapped '{product_name}' to handle '{mapped_handle}'")
         product_name = mapped_handle
 
-    # GraphQL query using productByHandle
+    # GraphQL query using handle
     query = f'''
     {{
       productByHandle(handle: "{product_name}") {{
@@ -212,8 +225,8 @@ async def get_product_details(request: Request):
 
         product = result.get("data", {}).get("productByHandle")
         if not product:
-            print("🛑 No product found.")
-            return {"reply": "Sorry, I couldn't find that product in our store."}
+            print(f"🛑 No product found for handle: {product_name}")
+            return {"reply": f"Sorry, I couldn't find that product in our store."}
 
         title = product["title"]
         description = product["description"]
@@ -227,18 +240,6 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", str(e))
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
