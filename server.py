@@ -78,7 +78,7 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=30  # reduced timeout for quicker failure
+                                timeout=30
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
@@ -131,21 +131,62 @@ async def get_product_details(request: Request):
     if not product_name:
         return {"reply": "Missing product name."}
 
+    # 🧠 Keyword-to-handle mapping
+    product_mappings = {
+        "allulose": "rxsugar-1-pound-canister",
+        "sweetener": "rxsugar-1-pound-canister",
+        "sugar": "rxsugar-1-pound-canister",
+        "stick pack": "rxsugar-30-stick-pack-carton",
+        "sticks": "rxsugar-30-stick-pack-carton",
+
+        "cereal": "rxsugar-cereal-pro",
+        "cocoa cereal": "rxsugar-cereal-pro-cocoa-crunch",
+        "golden cereal": "rxsugar-cereal-pro-golden-crunch",
+
+        "brownie mix": "rxsugar-keto-brownie-mix",
+        "mint brownie": "rxsugar-mint-brownie-swealthy-snax",
+
+        "caramel snack": "rxsugar-caramel-swealthy-snax",
+        "chocolate snack": "rxsugar-chocolate-swealthy-snax",
+        "swealthy": "rxsugar-swealthy-stix",
+
+        "gummies": "rxsugar-gummies-pro",
+
+        "fiber": "rxsugar-fiber-pro",
+
+        "organic liquid sugar": "organic-liquid-sugar",
+        "caramel syrup": "rxsugar-organic-caramel-syrup",
+        "chocolate syrup": "organic-chocolate-syrup",
+        "cinnamon syrup": "rxsugar-organic-cinnamon-syrup",
+        "hazelnut syrup": "rxsugar-organic-hazelnut-syrup",
+        "pancake syrup": "organic-pancake-syrup",
+        "vanilla syrup": "rxsugar-organic-vanilla-syrup",
+
+        "rxsugar": "rxsugar-1-pound-canister",
+        "rx sugar": "rxsugar-1-pound-canister",
+        "allullose": "rxsugar-1-pound-canister",
+        "syrup": "organic-liquid-sugar",
+        "liquid sweetener": "organic-liquid-sugar",
+        "snack": "rxsugar-caramel-swealthy-snax"
+    }
+
+    mapped_handle = product_mappings.get(product_name.lower())
+    if mapped_handle:
+        print(f"🔁 Mapped '{product_name}' to handle '{mapped_handle}'")
+        product_name = mapped_handle
+
+    # GraphQL query using productByHandle
     query = f'''
     {{
-      products(first: 1, query: "{product_name}") {{
-        edges {{
-          node {{
-            title
-            description
-            variants(first: 1) {{
-              edges {{
-                node {{
-                  price {{
-                    amount
-                    currencyCode
-                  }}
-                }}
+      productByHandle(handle: "{product_name}") {{
+        title
+        description
+        variants(first: 1) {{
+          edges {{
+            node {{
+              price {{
+                amount
+                currencyCode
               }}
             }}
           }}
@@ -164,17 +205,16 @@ async def get_product_details(request: Request):
             SHOPIFY_STORE_DOMAIN,
             json={"query": query},
             headers=headers,
-            timeout=40  # make this tight to avoid function timeout
+            timeout=40
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
 
-        product_edges = result.get("data", {}).get("products", {}).get("edges", [])
-        if not product_edges:
-            print("🛑 No matching product found.")
+        product = result.get("data", {}).get("productByHandle")
+        if not product:
+            print("🛑 No product found.")
             return {"reply": "Sorry, I couldn't find that product in our store."}
 
-        product = product_edges[0]["node"]
         title = product["title"]
         description = product["description"]
         price_info = product["variants"]["edges"][0]["node"]["price"]
