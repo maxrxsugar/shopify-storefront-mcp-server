@@ -133,7 +133,6 @@ async def get_product_details(request: Request):
 
     # ✅ Updated product handle mapping
     product_mappings = {
-        # Core categories
         "allulose": "rxsugar-allulose-sugar-2-pound-canister",
         "sweetener": "rxsugar-allulose-sugar-2-pound-canister",
         "sugar": "rxsugar-allulose-sugar-2-pound-canister",
@@ -141,7 +140,6 @@ async def get_product_details(request: Request):
         "gummies": "rxsugar-gummies-pro",
         "glp": "craving-control-natural-glp-1-boost-bundle",
 
-        # Cereal
         "cereal": "rxsugar-cereal-pro",
         "cereal pro": "rxsugar-cereal-pro",
         "cocoa cereal": "rxsugar-cereal-pro-cocoa-crunch",
@@ -150,35 +148,29 @@ async def get_product_details(request: Request):
         "golden crunch": "rxsugar-cereal-pro-golden-crunch",
         "cereal sampler": "rxsugar-cereal-pro-sampler-pack",
 
-        # Brownie & Baking
         "brownie mix": "rxsugar-keto-brownie-mix",
         "mint brownie": "rxsugar-mint-brownie-swealthy-snax-caddy",
 
-        # Swealthy Snax
         "swealthy": "rxsugar-swealthy-snax",
         "snax": "rxsugar-swealthy-snax",
         "caramel snack": "rxsugar-caramel-swealthy-snax-caddy",
         "vanilla snack": "rxsugar-vanilla-creme-swealthy-snax-caddy",
         "chocolate snack": "rxsugar-chocolate-swealthy-snax-caddy",
 
-        # Singles
         "mint brownie single": "rxsugar-mint-brownie-swealthy-snax",
         "caramel single": "rxsugar-caramel-swealthy-snax",
         "vanilla creme single": "rxsugar-vanilla-creme-swealthy-snax",
         "chocolate single": "rxsugar-chocolate-swealthy-snax",
         "stix": "rxsugar-swealthy-stix",
 
-        # Misspellings / common phrases
         "rx sugar": "rxsugar-allulose-sugar-2-pound-canister",
         "allullose": "rxsugar-allulose-sugar-2-pound-canister",
         "protien": "rxsugar-gummies-pro",
         "vitamine": "rxsugar-gummies-pro"
     }
 
-    # Find best match
     mapped_handle = product_mappings.get(product_name)
     if not mapped_handle:
-        # Optional: fuzzy contains-match fallback
         for keyword, handle in product_mappings.items():
             if keyword in product_name:
                 mapped_handle = handle
@@ -188,19 +180,23 @@ async def get_product_details(request: Request):
         print(f"🔁 Mapped '{product_name}' to handle '{mapped_handle}'")
         product_name = mapped_handle
 
-    # GraphQL query using handle
     query = f'''
     {{
       productByHandle(handle: "{product_name}") {{
         title
         description
-        variants(first: 1) {{
+        productType
+        tags
+        availableForSale
+        images(first: 5) {{
+          edges {{ node {{ url altText }} }}
+        }}
+        variants(first: 5) {{
           edges {{
             node {{
-              price {{
-                amount
-                currencyCode
-              }}
+              title
+              availableForSale
+              price {{ amount currencyCode }}
             }}
           }}
         }}
@@ -228,14 +224,20 @@ async def get_product_details(request: Request):
             print(f"🛑 No product found for handle: {product_name}")
             return {"reply": f"Sorry, I couldn't find that product in our store."}
 
-        title = product["title"]
-        description = product["description"]
-        price_info = product["variants"]["edges"][0]["node"]["price"]
-        price = f"{price_info['amount']} {price_info['currencyCode']}"
+        images = [img["node"] for img in product.get("images", {}).get("edges", [])]
+        variants = [v["node"] for v in product.get("variants", {}).get("edges", [])]
 
-        return {
-            "reply": f"{title}: {description} Price: {price}"
+        enriched_data = {
+            "title": product.get("title"),
+            "description": product.get("description"),
+            "available": product.get("availableForSale"),
+            "productType": product.get("productType"),
+            "tags": product.get("tags"),
+            "images": images,
+            "variants": variants
         }
+
+        return {"reply": json.dumps(enriched_data, indent=2)}
 
     except Exception as e:
         print("❌ Shopify error:", str(e))
