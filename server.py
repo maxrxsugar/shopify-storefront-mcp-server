@@ -6,11 +6,13 @@ import time
 import requests
 import json
 import re
+from fastapi.testclient import TestClient
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
+client = TestClient(app)  # ✅ Internal FastAPI client for calling endpoints directly
 
 # ✅ CORS Middleware
 app.add_middleware(
@@ -76,32 +78,16 @@ async def mcp_handler(request: Request):
 
                     if func_name == "getProductDetails":
                         try:
-                            response = requests.post(
-                                "https://rxshopifympc.onrender.com/get-product-details",
-                                json=args,
-                                timeout=60
-                            )
+                            response = client.post("/get-product-details", json=args)
                             result = response.json()
                             print("📬 Shopify function result:", result)
 
-                            output_text = ""
-                            try:
-                                parsed = json.loads(result.get("reply", "{}"))
-                                title = parsed.get("title", "")
-                                desc = parsed.get("description", "")
-                                price = parsed.get("variants", [{}])[0].get("price", {}).get("amount", "")
-                                currency = parsed.get("variants", [{}])[0].get("price", {}).get("currencyCode", "")
-                                image_url = parsed.get("images", [{}])[0].get("url", "")
-                                output_text = f"{title}\n{desc}\nPrice: {price} {currency}\nImage: {image_url}"
-                            except Exception as parse_error:
-                                output_text = result.get("reply", "No reply provided.")
-
                             tool_outputs.append({
                                 "tool_call_id": call.id,
-                                "output": output_text
+                                "output": result.get("reply", "No reply provided.")
                             })
                         except Exception as e:
-                            print("❌ Error calling function endpoint:", str(e))
+                            print("❌ Internal call error:", str(e))
                             tool_outputs.append({
                                 "tool_call_id": call.id,
                                 "output": "Sorry, there was an issue fetching the product details."
@@ -171,7 +157,7 @@ async def get_product_details(request: Request):
     mapped_handle = product_mappings.get(product_name)
     if not mapped_handle:
         for keyword, handle in product_mappings.items():
-            if re.search(rf"\\b{re.escape(keyword)}\\b", product_name):
+            if re.search(rf"\b{re.escape(keyword)}\b", product_name):
                 mapped_handle = handle
                 break
 
@@ -213,7 +199,7 @@ async def get_product_details(request: Request):
             SHOPIFY_STORE_DOMAIN,
             json={"query": query},
             headers=headers,
-            timeout=60
+            timeout=40
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
