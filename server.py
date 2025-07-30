@@ -79,14 +79,26 @@ async def mcp_handler(request: Request):
                             response = requests.post(
                                 "https://rxshopifympc.onrender.com/get-product-details",
                                 json=args,
-                                timeout=30
+                                timeout=60
                             )
                             result = response.json()
                             print("📬 Shopify function result:", result)
 
+                            output_text = ""
+                            try:
+                                parsed = json.loads(result.get("reply", "{}"))
+                                title = parsed.get("title", "")
+                                desc = parsed.get("description", "")
+                                price = parsed.get("variants", [{}])[0].get("price", {}).get("amount", "")
+                                currency = parsed.get("variants", [{}])[0].get("price", {}).get("currencyCode", "")
+                                image_url = parsed.get("images", [{}])[0].get("url", "")
+                                output_text = f"{title}\n{desc}\nPrice: {price} {currency}\nImage: {image_url}"
+                            except Exception as parse_error:
+                                output_text = result.get("reply", "No reply provided.")
+
                             tool_outputs.append({
                                 "tool_call_id": call.id,
-                                "output": result.get("reply", "No reply provided.")
+                                "output": output_text
                             })
                         except Exception as e:
                             print("❌ Error calling function endpoint:", str(e))
@@ -201,7 +213,7 @@ async def get_product_details(request: Request):
             SHOPIFY_STORE_DOMAIN,
             json={"query": query},
             headers=headers,
-            timeout=40
+            timeout=60
         )
         result = response.json()
         print("🔍 Raw Shopify response:", result)
@@ -229,6 +241,7 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", str(e))
         return {"reply": "Sorry, there was a problem fetching the product info."}
+
 
 
 
