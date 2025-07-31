@@ -131,27 +131,53 @@ async def get_product_details(request: Request):
         return {"reply": "Missing product name."}
 
     product_mappings = {
+        # 🥣 Cereals
         "cereal": "rxsugar-cereal-pro",
         "cereals": "rxsugar-cereal-pro",
+        "breakfast": "rxsugar-cereal-pro",
+        "breakfast food": "rxsugar-cereal-pro",
+        "morning snack": "rxsugar-cereal-pro",
+        "cereal bundle": "rxsugar-cereal-pro",
+        "chocolate cereal": "rxsugar-cereal-pro-cocoa-crunch",
+        "golden cereal": "rxsugar-cereal-pro-golden-crunch",
+        "sampler": "rxsugar-cereal-pro-sampler-pack",
+
+        # 🍬 Gummies / Bundle
+        "gummies": "rxsugar-gummies-pro",
+        "vitamins": "rxsugar-gummies-pro",
+        "probiotic": "rxsugar-gummies-pro",
+        "glp gummies": "rxsugar-gummies-pro",
+        "glp-1": "craving-control-natural-glp-1-boost-bundle",
+
+        # 🍫 Swealthy Snax
+        "snack": "rxsugar-swealthy-snax",
+        "snacks": "rxsugar-swealthy-snax",
+        "candy": "rxsugar-swealthy-snax",
+        "candy bar": "rxsugar-swealthy-snax",
+        "healthy candy": "rxsugar-swealthy-snax",
+        "sweet bar": "rxsugar-swealthy-snax",
+        "chocolate snack": "rxsugar-chocolate-swealthy-snax-caddy",
+        "mint snack": "rxsugar-mint-brownie-swealthy-snax-caddy",
+        "caramel snack": "rxsugar-caramel-swealthy-snax-caddy",
+        "vanilla snack": "rxsugar-vanilla-creme-swealthy-snax-caddy",
+
+        # 🍰 Brownie Mix
+        "brownie": "rxsugar-keto-brownie-mix",
+        "brownie mix": "rxsugar-keto-brownie-mix",
+        "glp brownie": "rxsugar-keto-brownie-mix",
+
+        # 💧 Allulose + Stix
         "sweetener": "rxsugar-allulose-sugar-2-pound-canister",
         "allulose": "rxsugar-allulose-sugar-2-pound-canister",
         "sugar": "rxsugar-allulose-sugar-2-pound-canister",
-        "fiber": "rxsugar-fiber-pro",
-        "gummies": "rxsugar-gummies-pro",
-        "glp": "craving-control-natural-glp-1-boost-bundle",
-        "sampler": "rxsugar-cereal-pro-sampler-pack",
-        "cocoa crunch": "rxsugar-cereal-pro-cocoa-crunch",
-        "golden crunch": "rxsugar-cereal-pro-golden-crunch",
-        "brownie": "rxsugar-keto-brownie-mix",
-        "mint brownie": "rxsugar-mint-brownie-swealthy-snax-caddy",
-        "snack": "rxsugar-swealthy-snax",
-        "snacks": "rxsugar-swealthy-snax",
-        "caramel": "rxsugar-caramel-swealthy-snax-caddy",
-        "vanilla": "rxsugar-vanilla-creme-swealthy-snax-caddy",
-        "chocolate": "rxsugar-chocolate-swealthy-snax-caddy",
         "stix": "rxsugar-swealthy-stix",
-        "protien": "rxsugar-gummies-pro",
-        "vitamine": "rxsugar-gummies-pro"
+
+        # 🌾 Fiber
+        "fiber": "rxsugar-fiber-pro",
+        "fiber pro": "rxsugar-fiber-pro",
+        "prebiotic": "rxsugar-fiber-pro",
+        "digestive health": "rxsugar-fiber-pro",
+        "high fiber": "rxsugar-fiber-pro"
     }
 
     mapped_handle = product_mappings.get(product_name)
@@ -235,8 +261,6 @@ async def get_product_details(request: Request):
     except Exception as e:
         print("❌ Shopify error:", str(e))
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
-
 
 
 
