@@ -212,33 +212,29 @@ async def get_product_details(request: Request):
         images = product.get("images", {}).get("edges", [])
         variants = product.get("variants", {}).get("edges", [])
 
-        image_links = "\n".join([f"![Image]({img['node']['url']})" for img in images])
-        price_lines = [
-            f"- **{v['node']['title']}**: ${v['node']['price']['amount']} {v['node']['price']['currencyCode']}"
+        image_html = "<br>".join([
+            f'<img src="{img["node"]["url"]}" alt="Product Image" style="max-width:300px;" />'
+            for img in images
+        ])
+        price_html = "<ul>" + "".join([
+            f'<li><strong>{v["node"]["title"]}</strong>: ${v["node"]["price"]["amount"]} {v["node"]["price"]["currencyCode"]}</li>'
             for v in variants
-        ]
+        ]) + "</ul>"
 
-        body = f"""
-### {product['title']}
+        html_body = f'''
+        <h3>{product['title']}</h3>
+        <p>{product['description']}</p>
+        <p><strong>Available:</strong> {'Yes' if product['availableForSale'] else 'No'}</p>
+        <p><strong>Price Options:</strong>{price_html}</p>
+        <p>{image_html}</p>
+        <p><a href="https://www.rxsugar.com/products/{product_name}" target="_blank">🔗 View on Store</a></p>
+        '''
 
-{product['description']}
-
-**Available:** {'Yes' if product['availableForSale'] else 'No'}
-
-**Price Options:**
-{chr(10).join(price_lines)}
-
-{image_links}
-
-[🔗 View on Store](https://www.rxsugar.com/products/{product_name})
-"""
-
-        return {"reply": body.strip()}
+        return {"reply": html_body.strip()}
 
     except Exception as e:
         print("❌ Shopify error:", str(e))
         return {"reply": "Sorry, there was a problem fetching the product info."}
-
 
 
 
